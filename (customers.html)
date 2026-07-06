@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoreBiz - Customers</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;padding:20px}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.back{color:#F59E0B;text-decoration:none;font-size:24px}
+h1{font-size:20px;font-weight:800}
+input,select{width:100%;background:#0F172A;border:1px solid #334155;color:#fff;padding:12px 14px;border-radius:10px;font-size:15px;margin-bottom:12px}
+input:focus,select:focus{outline:none;border-color:#F59E0B}
+.btn{width:100%;background:#F59E0B;color:#0F172A;border:none;padding:14px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:20px}
+.card{background:#1E293B;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid #334155}
+.row{display:flex;justify-content:space-between;align-items:center}
+.name{font-size:16px;font-weight:700}
+.phone{color:#94A3B8;font-size:13px;margin-top:2px}
+.product{color:#CBD5E1;font-size:13px;margin-top:8px}
+.badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.paid{background:rgba(16,185,129,0.15);color:#34D399}
+.pending{background:rgba(239,68,68,0.15);color:#FCA5A5}
+.amt{font-size:14px;font-weight:700;margin-top:4px}
+.del{background:none;border:none;color:#F87171;font-size:13px;cursor:pointer}
+.empty{color:#64748B;text-align:center;padding:40px 0;font-size:14px}
+.search{margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="top">
+<a href="index.html" class="back">←</a>
+<h1>Customers</h1>
+</div>
+
+<input class="search" id="search" placeholder="Naam ya phone se search karein" oninput="render()">
+
+<div id="formBox" style="display:none">
+<input id="cname" placeholder="Customer ka naam">
+<input id="cphone" placeholder="Phone number">
+<input id="cproduct" placeholder="Kya order kiya (product)">
+<select id="cstatus">
+<option value="pending">Payment Baaki</option>
+<option value="paid">Payment Ho Gaya</option>
+</select>
+<input id="camount" placeholder="Amount (₹)" type="number">
+<button class="btn" onclick="saveCustomer()">Save Customer</button>
+</div>
+
+<button class="btn" id="toggleBtn" onclick="toggleForm()">+ Naya Customer Add Karein</button>
+
+<div id="list"></div>
+
+<script>
+function getCustomers(){
+  return JSON.parse(localStorage.getItem('corebizCustomers')||'[]');
+}
+function setCustomers(list){
+  localStorage.setItem('corebizCustomers', JSON.stringify(list));
+}
+function toggleForm(){
+  const box=document.getElementById('formBox');
+  box.style.display = box.style.display==='none' ? 'block' : 'none';
+}
+function saveCustomer(){
+  const name=document.getElementById('cname').value.trim();
+  const phone=document.getElementById('cphone').value.trim();
+  const product=document.getElementById('cproduct').value.trim();
+  const status=document.getElementById('cstatus').value;
+  const amount=document.getElementById('camount').value;
+  if(!name||!phone){alert('Naam aur phone daalna zaroori hai');return;}
+  const list=getCustomers();
+  list.unshift({id:Date.now(),name,phone,product,status,amount});
+  setCustomers(list);
+  document.getElementById('cname').value='';
+  document.getElementById('cphone').value='';
+  document.getElementById('cproduct').value='';
+  document.getElementById('camount').value='';
+  toggleForm();
+  render();
+}
+function deleteCustomer(id){
+  if(!confirm('Delete karna hai?'))return;
+  setCustomers(getCustomers().filter(c=>c.id!==id));
+  render();
+}
+function render(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const list=getCustomers().filter(c=>c.name.toLowerCase().includes(q)||c.phone.includes(q));
+  const box=document.getElementById('list');
+  if(list.length===0){
+    box.innerHTML='<div class="empty">Koi customer nahi hai. Upar se add karein.</div>';
+    return;
+  }
+  box.innerHTML=list.map(c=>`
+    <div class="card">
+      <div class="row">
+        <div>
+          <div class="name">${c.name}</div>
+          <div class="phone">${c.phone}</div>
+        </div>
+        <span class="badge ${c.status==='paid'?'paid':'pending'}">${c.status==='paid'?'Paid':'Pending'}</span>
+      </div>
+      ${c.product?`<div class="product">${c.product}</div>`:''}
+      ${c.amount?`<div class="amt">₹${c.amount}</div>`:''}
+      <div style="margin-top:10px;text-align:right">
+        <button class="del" onclick="deleteCustomer(${c.id})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+render();
+</script>
+</body>
+</html>
