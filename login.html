@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoreBiz - Login</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#0F172A; color:#fff; font-family:system-ui,sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .card {
+    background:#1E293B; border-radius:20px; padding:32px 24px;
+    max-width:380px; width:100%;
+  }
+  .logo { text-align:center; font-size:28px; font-weight:800; color:#F59E0B; margin-bottom:4px; }
+  .sub { text-align:center; color:#94A3B8; font-size:13px; margin-bottom:24px; }
+  label { font-size:13px; color:#CBD5E1; display:block; margin-bottom:6px; }
+  input {
+    width:100%; background:#0F172A; border:1px solid #334155; color:#fff;
+    padding:12px 14px; border-radius:10px; font-size:15px; margin-bottom:16px;
+  }
+  input:focus { outline:none; border-color:#F59E0B; }
+  button.primary {
+    width:100%; background:#F59E0B; color:#0F172A; border:none;
+    padding:14px; border-radius:10px; font-size:15px; font-weight:700;
+    margin-bottom:12px;
+  }
+  button.primary:disabled { opacity:0.6; }
+  .toggle { text-align:center; font-size:13px; color:#94A3B8; margin-top:8px; }
+  .toggle span { color:#38BDF8; font-weight:600; }
+  .error {
+    background:rgba(239,68,68,0.15); color:#FCA5A5; font-size:13px;
+    padding:10px 12px; border-radius:8px; margin-bottom:16px; display:none;
+  }
+  .success {
+    background:rgba(34,197,94,0.15); color:#86EFAC; font-size:13px;
+    padding:10px 12px; border-radius:8px; margin-bottom:16px; display:none;
+  }
+  .forgot { text-align:right; font-size:12px; color:#38BDF8; margin:-8px 0 16px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">CoreBiz</div>
+    <div class="sub" id="modeSubtitle">Apne business dashboard me login karein</div>
+
+    <div class="error" id="errorBox"></div>
+    <div class="success" id="successBox"></div>
+
+    <form id="authForm">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="aapka@email.com" required>
+
+      <label>Password</label>
+      <input type="password" id="password" placeholder="Kam se kam 6 characters" required minlength="6">
+
+      <div class="forgot" id="forgotLink">Password bhool gaye?</div>
+
+      <button type="submit" class="primary" id="submitBtn">Login karein</button>
+    </form>
+
+    <div class="toggle" id="toggleModeText">
+      Naya account banana hai? <span id="toggleModeBtn">Signup karein</span>
+    </div>
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    sendPasswordResetEmail
+  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
+    authDomain: "corebiz-f7762.firebaseapp.com",
+    projectId: "corebiz-f7762",
+    storageBucket: "corebiz-f7762.firebasestorage.app",
+    messagingSenderId: "928975624139",
+    appId: "1:928975624139:web:c24e248984883a3a30484e",
+    measurementId: "G-33FSED87HM"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  let isSignup = false;
+
+  const form = document.getElementById('authForm');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const submitBtn = document.getElementById('submitBtn');
+  const errorBox = document.getElementById('errorBox');
+  const successBox = document.getElementById('successBox');
+  const toggleModeBtn = document.getElementById('toggleModeBtn');
+  const toggleModeText = document.getElementById('toggleModeText');
+  const modeSubtitle = document.getElementById('modeSubtitle');
+  const forgotLink = document.getElementById('forgotLink');
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = 'block';
+    successBox.style.display = 'none';
+  }
+  function showSuccess(msg) {
+    successBox.textContent = msg;
+    successBox.style.display = 'block';
+    errorBox.style.display = 'none';
+  }
+  function clearMessages() {
+    errorBox.style.display = 'none';
+    successBox.style.display = 'none';
+  }
+
+  function friendlyError(code) {
+    const map = {
+      'auth/invalid-email': 'Email sahi format me nahi hai.',
+      'auth/user-not-found': 'Ye email registered nahi hai. Signup karein.',
+      'auth/wrong-password': 'Password galat hai.',
+      'auth/invalid-credential': 'Email ya password galat hai.',
+      'auth/email-already-in-use': 'Ye email already registered hai. Login karein.',
+      'auth/weak-password': 'Password kam se kam 6 characters ka hona chahiye.',
+      'auth/too-many-requests': 'Bahut zyada attempts ho gaye. Thodi der baad try karein.'
+    };
+    return map[code] || 'Kuch galat ho gaya. Dobara try karein.';
+  }
+
+  toggleModeBtn.addEventListener('click', () => {
+    isSignup = !isSignup;
+    clearMessages();
+    if (isSignup) {
+      submitBtn.textContent = 'Account banayein';
+      modeSubtitle.textContent = 'Naya CoreBiz account banayein';
+      toggleModeText.innerHTML = 'Pehle se account hai? <span id="toggleModeBtn">Login karein</span>';
+      forgotLink.style.display = 'none';
+    } else {
+      submitBtn.textContent = 'Login karein';
+      modeSubtitle.textContent = 'Apne business dashboard me login karein';
+      toggleModeText.innerHTML = 'Naya account banana hai? <span id="toggleModeBtn">Signup karein</span>';
+      forgotLink.style.display = 'block';
+    }
+    document.getElementById('toggleModeBtn').addEventListener('click', () => toggleModeBtn.click());
+  });
+
+  forgotLink.addEventListener('click', async () => {
+    clearMessages();
+    const email = emailInput.value.trim();
+    if (!email) {
+      showError('Pehle apna email daalein, phir "Password bhool gaye" dabayein.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      showSuccess('Reset link aapke email pe bhej di gayi hai.');
+    } catch (err) {
+      showError(friendlyError(err.code));
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMessages();
+    submitBtn.disabled = true;
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    try {
+      if (isSignup) {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+      window.location.href = 'index.html';
+    } catch (err) {
+      showError(friendlyError(err.code));
+      submitBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
