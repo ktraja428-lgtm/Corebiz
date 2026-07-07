@@ -22,9 +22,12 @@ input:focus,select:focus{outline:none;border-color:#F59E0B}
 .paid{background:rgba(16,185,129,0.15);color:#34D399}
 .pending{background:rgba(239,68,68,0.15);color:#FCA5A5}
 .amt{font-size:14px;font-weight:700;margin-top:4px}
-.del{background:none;border:none;color:#F87171;font-size:13px;cursor:pointer}
+.actions{margin-top:10px;text-align:right;display:flex;gap:14px;justify-content:flex-end}
+.edit{background:none;border:none;color:#38BDF8;font-size:13px;cursor:pointer;font-weight:600}
+.del{background:none;border:none;color:#F87171;font-size:13px;cursor:pointer;font-weight:600}
 .empty{color:#64748B;text-align:center;padding:40px 0;font-size:14px}
 .search{margin-bottom:16px}
+.formTitle{font-size:14px;color:#94A3B8;margin-bottom:10px;font-weight:700}
 </style>
 </head>
 <body>
@@ -36,6 +39,7 @@ input:focus,select:focus{outline:none;border-color:#F59E0B}
 <input class="search" id="search" placeholder="Naam ya phone se search karein" oninput="render()">
 
 <div id="formBox" style="display:none">
+<div class="formTitle" id="formTitle">Naya Customer</div>
 <input id="cname" placeholder="Customer ka naam">
 <input id="cphone" placeholder="Phone number">
 <input id="cproduct" placeholder="Kya order kiya (product)">
@@ -44,7 +48,7 @@ input:focus,select:focus{outline:none;border-color:#F59E0B}
 <option value="paid">Payment Ho Gaya</option>
 </select>
 <input id="camount" placeholder="Amount (₹)" type="number">
-<button class="btn" onclick="saveCustomer()">Save Customer</button>
+<button class="btn" id="saveBtn" onclick="saveCustomer()">Save Customer</button>
 </div>
 
 <button class="btn" id="toggleBtn" onclick="toggleForm()">+ Naya Customer Add Karein</button>
@@ -52,6 +56,8 @@ input:focus,select:focus{outline:none;border-color:#F59E0B}
 <div id="list"></div>
 
 <script>
+let editingId = null;
+
 function getCustomers(){
   return JSON.parse(localStorage.getItem('corebizCustomers')||'[]');
 }
@@ -60,7 +66,36 @@ function setCustomers(list){
 }
 function toggleForm(){
   const box=document.getElementById('formBox');
-  box.style.display = box.style.display==='none' ? 'block' : 'none';
+  if(box.style.display==='block'){
+    box.style.display='none';
+    resetForm();
+  } else {
+    box.style.display='block';
+  }
+}
+function resetForm(){
+  editingId = null;
+  document.getElementById('formTitle').textContent='Naya Customer';
+  document.getElementById('saveBtn').textContent='Save Customer';
+  document.getElementById('cname').value='';
+  document.getElementById('cphone').value='';
+  document.getElementById('cproduct').value='';
+  document.getElementById('cstatus').value='pending';
+  document.getElementById('camount').value='';
+}
+function editCustomer(id){
+  const c = getCustomers().find(x=>x.id===id);
+  if(!c) return;
+  editingId = id;
+  document.getElementById('formTitle').textContent='Customer Edit Karein';
+  document.getElementById('saveBtn').textContent='Update Customer';
+  document.getElementById('cname').value=c.name;
+  document.getElementById('cphone').value=c.phone;
+  document.getElementById('cproduct').value=c.product||'';
+  document.getElementById('cstatus').value=c.status;
+  document.getElementById('camount').value=c.amount||'';
+  document.getElementById('formBox').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 function saveCustomer(){
   const name=document.getElementById('cname').value.trim();
@@ -69,14 +104,15 @@ function saveCustomer(){
   const status=document.getElementById('cstatus').value;
   const amount=document.getElementById('camount').value;
   if(!name||!phone){alert('Naam aur phone daalna zaroori hai');return;}
-  const list=getCustomers();
-  list.unshift({id:Date.now(),name,phone,product,status,amount});
+  let list=getCustomers();
+  if(editingId){
+    list = list.map(c=>c.id===editingId?{...c,name,phone,product,status,amount}:c);
+  } else {
+    list.unshift({id:Date.now(),name,phone,product,status,amount});
+  }
   setCustomers(list);
-  document.getElementById('cname').value='';
-  document.getElementById('cphone').value='';
-  document.getElementById('cproduct').value='';
-  document.getElementById('camount').value='';
-  toggleForm();
+  resetForm();
+  document.getElementById('formBox').style.display='none';
   render();
 }
 function deleteCustomer(id){
@@ -103,8 +139,9 @@ function render(){
       </div>
       ${c.product?`<div class="product">${c.product}</div>`:''}
       ${c.amount?`<div class="amt">₹${c.amount}</div>`:''}
-      <div style="margin-top:10px;text-align:right">
-        <button class="del" onclick="deleteCustomer(${c.id})">Delete</button>
+      <div class="actions">
+        <button class="edit" onclick="editCustomer(${c.id})">✏️ Edit</button>
+        <button class="del" onclick="deleteCustomer(${c.id})">🗑️ Delete</button>
       </div>
     </div>
   `).join('');
