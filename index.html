@@ -41,7 +41,7 @@ function Login({onLogin}){
     const np=pin+k;setPin(np);
     if(np.length===4){
       setTimeout(()=>{
-        if(np==="1234"){onLogin();}
+        if(np==="1234"){localStorage.setItem('cbLoggedIn','1');onLogin();}
         else{const t=tries+1;setTries(t);setErr(t>=5?"Account lock ho gaya.":`Galat PIN. ${5-t} mauke bache.`);setPin("");}
       },300);
     }
@@ -70,7 +70,7 @@ function Login({onLogin}){
 }
 
 function App(){
-  const[loggedIn,setLoggedIn]=React.useState(false);
+  const[loggedIn,setLoggedIn]=React.useState(localStorage.getItem('cbLoggedIn')==='1');
   const[role,setRole]=React.useState("CEO");
   const[targetOn,setTargetOn]=React.useState(false);
   const[tasks,setTasks]=React.useState(Object.fromEntries(ROLES.map(r=>[r.key,DATA[r.key].tasks.map((t,i)=>({text:t,done:false,id:i}))])));
