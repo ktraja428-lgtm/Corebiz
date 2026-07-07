@@ -22,9 +22,10 @@ input:focus,select:focus{outline:none;border-color:#F59E0B}
 .paid{background:rgba(16,185,129,0.15);color:#34D399}
 .pending{background:rgba(239,68,68,0.15);color:#FCA5A5}
 .amt{font-size:14px;font-weight:700;margin-top:4px}
-.actions{margin-top:10px;text-align:right;display:flex;gap:14px;justify-content:flex-end}
+.actions{margin-top:10px;text-align:right;display:flex;gap:14px;justify-content:flex-end;flex-wrap:wrap}
 .edit{background:none;border:none;color:#38BDF8;font-size:13px;cursor:pointer;font-weight:600}
 .del{background:none;border:none;color:#F87171;font-size:13px;cursor:pointer;font-weight:600}
+.remind{background:none;border:none;color:#34D399;font-size:13px;cursor:pointer;font-weight:600}
 .empty{color:#64748B;text-align:center;padding:40px 0;font-size:14px}
 .search{margin-bottom:16px}
 .formTitle{font-size:14px;color:#94A3B8;margin-bottom:10px;font-weight:700}
@@ -120,6 +121,14 @@ function deleteCustomer(id){
   setCustomers(getCustomers().filter(c=>c.id!==id));
   render();
 }
+function remindCustomer(id){
+  const c = getCustomers().find(x=>x.id===id);
+  if(!c) return;
+  const msg = `Namaste ${c.name} ji, aapka ₹${c.amount||'___'} ka payment abhi baaki hai${c.product?' ('+c.product+')':''}. Kripya jaldi clear karein. Dhanyavaad.`;
+  let phone = c.phone.replace(/\D/g,'');
+  if(phone.length===10) phone = '91'+phone;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
 function render(){
   const q=document.getElementById('search').value.toLowerCase();
   const list=getCustomers().filter(c=>c.name.toLowerCase().includes(q)||c.phone.includes(q));
@@ -140,6 +149,7 @@ function render(){
       ${c.product?`<div class="product">${c.product}</div>`:''}
       ${c.amount?`<div class="amt">₹${c.amount}</div>`:''}
       <div class="actions">
+        ${c.status==='pending'?`<button class="remind" onclick="remindCustomer(${c.id})">💰 Reminder</button>`:''}
         <button class="edit" onclick="editCustomer(${c.id})">✏️ Edit</button>
         <button class="del" onclick="deleteCustomer(${c.id})">🗑️ Delete</button>
       </div>
