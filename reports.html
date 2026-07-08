@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoreBiz - Reports</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;padding:20px}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.back{color:#F59E0B;text-decoration:none;font-size:24px}
+h1{font-size:20px;font-weight:800}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.card{background:#1E293B;border:1px solid #334155;border-radius:14px;padding:18px}
+.label{color:#94A3B8;font-size:12px;margin-bottom:8px}
+.value{font-size:22px;font-weight:900}
+.green{color:#34D399}
+.red{color:#FCA5A5}
+.orange{color:#F59E0B}
+.section{background:#1E293B;border:1px solid #334155;border-radius:14px;padding:18px;margin-bottom:16px}
+.sectionTitle{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.barRow{margin-bottom:12px}
+.barLabel{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;color:#CBD5E1}
+.barBg{height:8px;background:#0F172A;border-radius:4px;overflow:hidden}
+.barFill{height:100%;border-radius:4px}
+.empty{color:#64748B;text-align:center;padding:30px 0;font-size:14px}
+</style>
+</head>
+<body>
+<div class="top">
+<a href="index.html" class="back">←</a>
+<h1>Reports</h1>
+</div>
+
+<div class="grid">
+<div class="card">
+<div class="label">Total Customers</div>
+<div class="value" id="totalCustomers">0</div>
+</div>
+<div class="card">
+<div class="label">Total Collection</div>
+<div class="value green" id="totalPaid">₹0</div>
+</div>
+<div class="card">
+<div class="label">Payment Pending</div>
+<div class="value red" id="totalPending">₹0</div>
+</div>
+<div class="card">
+<div class="label">Pending Customers</div>
+<div class="value orange" id="pendingCount">0</div>
+</div>
+</div>
+
+<div class="section">
+<div class="sectionTitle">📊 Payment Status</div>
+<div id="statusBars"></div>
+</div>
+
+<div class="section">
+<div class="sectionTitle">🏆 Top Products/Orders</div>
+<div id="productList"></div>
+</div>
+
+<script>
+function getCustomers(){
+  return JSON.parse(localStorage.getItem('corebizCustomers')||'[]');
+}
+
+function render(){
+  const list = getCustomers();
+  const paid = list.filter(c=>c.status==='paid');
+  const pending = list.filter(c=>c.status==='pending');
+
+  const totalPaidAmt = paid.reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+  const totalPendingAmt = pending.reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+
+  document.getElementById('totalCustomers').textContent = list.length;
+  document.getElementById('totalPaid').textContent = '₹'+totalPaidAmt.toLocaleString('en-IN');
+  document.getElementById('totalPending').textContent = '₹'+totalPendingAmt.toLocaleString('en-IN');
+  document.getElementById('pendingCount').textContent = pending.length;
+
+  const total = list.length || 1;
+  const paidPct = Math.round((paid.length/total)*100);
+  const pendingPct = 100-paidPct;
+
+  document.getElementById('statusBars').innerHTML = list.length===0 ? '<div class="empty">Abhi koi data nahi hai</div>' : `
+    <div class="barRow">
+      <div class="barLabel"><span>✅ Payment Ho Gaya</span><span>${paid.length} (${paidPct}%)</span></div>
+      <div class="barBg"><div class="barFill" style="width:${paidPct}%;background:#34D399"></div></div>
+    </div>
+    <div class="barRow">
+      <div class="barLabel"><span>⏳ Payment Baaki</span><span>${pending.length} (${pendingPct}%)</span></div>
+      <div class="barBg"><div class="barFill" style="width:${pendingPct}%;background:#F87171"></div></div>
+    </div>
+  `;
+
+  const productCount = {};
+  list.forEach(c=>{
+    if(c.product){
+      productCount[c.product] = (productCount[c.product]||0)+1;
+    }
+  });
+  const sorted = Object.entries(productCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('productList').innerHTML = sorted.length===0 ? '<div class="empty">Abhi koi product data nahi hai</div>' : sorted.map(([name,count])=>`
+    <div class="barRow">
+      <div class="barLabel"><span>${name}</span><span>${count} order</span></div>
+    </div>
+  `).join('');
+}
+render();
+</script>
+</body>
+</html>
