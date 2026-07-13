@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -10,9 +11,9 @@ body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;padding:20px
 .top{display:flex;align-items:center;gap:12px;margin-bottom:20px}
 .back{color:#F59E0B;text-decoration:none;font-size:24px}
 h1{font-size:20px;font-weight:800}
-input,select{width:100%;background:#0F172A;border:1px solid #334155;color:#fff;padding:12px 14px;border-radius:10px;font-size:15px;margin-bottom:12px}
+input,select{width:100%;background:#0F172A;border:1px solid #334155;color:#fff;padding:12px 14px;border-radius:10px;font-size:15px;margin-bottom:16px}
 input:focus,select:focus{outline:none;border-color:#F59E0B}
-.btn{width:100%;background:#F59E0B;color:#0F172A;border:none;padding:14px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:20px}
+.btn{width:100%;background:#F59E0B;color:#0F172A;border:none;padding:14px;border-radius:10px;font-size:15px;font-weight:700;margin-bottom:12px}
 .card{background:#1E293B;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid #334155}
 .row{display:flex;justify-content:space-between;align-items:center}
 .name{font-size:16px;font-weight:700}
@@ -29,6 +30,7 @@ input:focus,select:focus{outline:none;border-color:#F59E0B}
 .empty{color:#64748B;text-align:center;padding:40px 0;font-size:14px}
 .search{margin-bottom:16px}
 .formTitle{font-size:14px;color:#94A3B8;margin-bottom:10px;font-weight:700}
+.loading{color:#94A3B8;text-align:center;padding:40px 0;font-size:14px}
 </style>
 </head>
 <body>
@@ -54,109 +56,159 @@ input:focus,select:focus{outline:none;border-color:#F59E0B}
 
 <button class="btn" id="toggleBtn" onclick="toggleForm()">+ Naya Customer Add Karein</button>
 
-<div id="list"></div>
+<div id="list"><div class="loading">Loading...</div></div>
 
-<script>
-let editingId = null;
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-function getCustomers(){
-  return JSON.parse(localStorage.getItem('corebizCustomers')||'[]');
-}
-function setCustomers(list){
-  localStorage.setItem('corebizCustomers', JSON.stringify(list));
-}
-function toggleForm(){
-  const box=document.getElementById('formBox');
-  if(box.style.display==='block'){
-    box.style.display='none';
-    resetForm();
-  } else {
-    box.style.display='block';
+  const firebaseConfig = {
+    apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
+    authDomain: "corebiz-f7762.firebaseapp.com",
+    projectId: "corebiz-f7762",
+    storageBucket: "corebiz-f7762.firebasestorage.app",
+    messagingSenderId: "928975624139",
+    appId: "1:928975624139:web:c24e248984883a3a3O484e",
+    measurementId: "G-33FSED87HM"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  let editingId = null;
+  let customersCache = [];
+  let userId = null;
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+    userId = user.uid;
+    listenToCustomers();
+  });
+
+  function customersCollection() {
+    return collection(db, "users", userId, "customers");
   }
-}
-function resetForm(){
-  editingId = null;
-  document.getElementById('formTitle').textContent='Naya Customer';
-  document.getElementById('saveBtn').textContent='Save Customer';
-  document.getElementById('cname').value='';
-  document.getElementById('cphone').value='';
-  document.getElementById('cproduct').value='';
-  document.getElementById('cstatus').value='pending';
-  document.getElementById('camount').value='';
-}
-function editCustomer(id){
-  const c = getCustomers().find(x=>x.id===id);
-  if(!c) return;
-  editingId = id;
-  document.getElementById('formTitle').textContent='Customer Edit Karein';
-  document.getElementById('saveBtn').textContent='Update Customer';
-  document.getElementById('cname').value=c.name;
-  document.getElementById('cphone').value=c.phone;
-  document.getElementById('cproduct').value=c.product||'';
-  document.getElementById('cstatus').value=c.status;
-  document.getElementById('camount').value=c.amount||'';
-  document.getElementById('formBox').style.display='block';
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-function saveCustomer(){
-  const name=document.getElementById('cname').value.trim();
-  const phone=document.getElementById('cphone').value.trim();
-  const product=document.getElementById('cproduct').value.trim();
-  const status=document.getElementById('cstatus').value;
-  const amount=document.getElementById('camount').value;
-  if(!name||!phone){alert('Naam aur phone daalna zaroori hai');return;}
-  let list=getCustomers();
-  if(editingId){
-    list = list.map(c=>c.id===editingId?{...c,name,phone,product,status,amount}:c);
-  } else {
-    list.unshift({id:Date.now(),name,phone,product,status,amount});
+
+  function listenToCustomers() {
+    onSnapshot(customersCollection(), (snapshot) => {
+      customersCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }, (err) => {
+      document.getElementById('list').innerHTML = '<div class="empty">Data load nahi ho paya. Internet check karein.</div>';
+      console.error(err);
+    });
   }
-  setCustomers(list);
-  resetForm();
-  document.getElementById('formBox').style.display='none';
-  render();
-}
-function deleteCustomer(id){
-  if(!confirm('Delete karna hai?'))return;
-  setCustomers(getCustomers().filter(c=>c.id!==id));
-  render();
-}
-function remindCustomer(id){
-  const c = getCustomers().find(x=>x.id===id);
-  if(!c) return;
-  const msg = `Namaste ${c.name} ji, aapka ₹${c.amount||'___'} ka payment abhi baaki hai${c.product?' ('+c.product+')':''}. Kripya jaldi clear karein. Dhanyavaad.`;
-  let phone = c.phone.replace(/\D/g,'');
-  if(phone.length===10) phone = '91'+phone;
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-}
-function render(){
-  const q=document.getElementById('search').value.toLowerCase();
-  const list=getCustomers().filter(c=>c.name.toLowerCase().includes(q)||c.phone.includes(q));
-  const box=document.getElementById('list');
-  if(list.length===0){
-    box.innerHTML='<div class="empty">Koi customer nahi hai. Upar se add karein.</div>';
-    return;
+
+  window.toggleForm = function () {
+    const box = document.getElementById('formBox');
+    if (box.style.display === 'block') {
+      box.style.display = 'none';
+      resetForm();
+    } else {
+      box.style.display = 'block';
+    }
+  };
+
+  function resetForm() {
+    editingId = null;
+    document.getElementById('formTitle').textContent = 'Naya Customer';
+    document.getElementById('saveBtn').textContent = 'Save Customer';
+    document.getElementById('cname').value = '';
+    document.getElementById('cphone').value = '';
+    document.getElementById('cproduct').value = '';
+    document.getElementById('cstatus').value = 'pending';
+    document.getElementById('camount').value = '';
   }
-  box.innerHTML=list.map(c=>`
-    <div class="card">
-      <div class="row">
-        <div>
-          <div class="name">${c.name}</div>
-          <div class="phone">${c.phone}</div>
+
+  window.editCustomer = function (id) {
+    const c = customersCache.find(x => x.id === id);
+    if (!c) return;
+    editingId = id;
+    document.getElementById('formTitle').textContent = 'Customer Edit Karein';
+    document.getElementById('saveBtn').textContent = 'Update Customer';
+    document.getElementById('cname').value = c.name;
+    document.getElementById('cphone').value = c.phone;
+    document.getElementById('cproduct').value = c.product || '';
+    document.getElementById('cstatus').value = c.status;
+    document.getElementById('camount').value = c.amount || '';
+    document.getElementById('formBox').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.saveCustomer = async function () {
+    const name = document.getElementById('cname').value.trim();
+    const phone = document.getElementById('cphone').value.trim();
+    const product = document.getElementById('cproduct').value.trim();
+    const status = document.getElementById('cstatus').value;
+    const amount = document.getElementById('camount').value;
+    if (!name || !phone) { alert('Naam aur phone daalna zaroori hai'); return; }
+
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      const id = editingId || Date.now().toString();
+      await setDoc(doc(customersCollection(), id), { name, phone, product, status, amount });
+      resetForm();
+      document.getElementById('formBox').style.display = 'none';
+    } catch (err) {
+      alert('Save nahi hua, internet check karein: ' + err.message);
+      saveBtn.textContent = editingId ? 'Update Customer' : 'Save Customer';
+    }
+  };
+
+  window.deleteCustomer = async function (id) {
+    if (!confirm('Delete karna hai?')) return;
+    try {
+      await deleteDoc(doc(customersCollection(), id));
+    } catch (err) {
+      alert('Delete nahi hua: ' + err.message);
+    }
+  };
+
+  window.remindCustomer = function (id) {
+    const c = customersCache.find(x => x.id === id);
+    if (!c) return;
+    const msg = `Namaste ${c.name} ji, aapka ₹${c.amount || '___'} ka payment abhi baaki hai${c.product ? ' (' + c.product + ')' : ''}. Kripya jaldi clear karein. Dhanyavaad.`;
+    let phone = c.phone.replace(/\D/g, '');
+    if (phone.length === 10) phone = '91' + phone;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  window.render = function () {
+    const q = document.getElementById('search').value.toLowerCase();
+    const list = customersCache.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q));
+    const box = document.getElementById('list');
+    if (list.length === 0) {
+      box.innerHTML = '<div class="empty">Koi customer nahi hai. Upar se add karein.</div>';
+      return;
+    }
+    box.innerHTML = list.map(c => `
+      <div class="card">
+        <div class="row">
+          <div>
+            <div class="name">${c.name}</div>
+            <div class="phone">${c.phone}</div>
+          </div>
+          <span class="badge ${c.status === 'paid' ? 'paid' : 'pending'}">${c.status === 'paid' ? 'Paid' : 'Pending'}</span>
         </div>
-        <span class="badge ${c.status==='paid'?'paid':'pending'}">${c.status==='paid'?'Paid':'Pending'}</span>
+        ${c.product ? `<div class="product">${c.product}</div>` : ''}
+        ${c.amount ? `<div class="amt">₹${c.amount}</div>` : ''}
+        <div class="actions">
+          ${c.status === 'pending' ? `<button class="remind" onclick="remindCustomer(${JSON.stringify(c.id)})">💰 Reminder</button>` : ''}
+          <button class="edit" onclick="editCustomer(${JSON.stringify(c.id)})">✏️ Edit</button>
+          <button class="del" onclick="deleteCustomer(${JSON.stringify(c.id)})">🗑️ Delete</button>
+        </div>
       </div>
-      ${c.product?`<div class="product">${c.product}</div>`:''}
-      ${c.amount?`<div class="amt">₹${c.amount}</div>`:''}
-      <div class="actions">
-        ${c.status==='pending'?`<button class="remind" onclick="remindCustomer(${c.id})">💰 Reminder</button>`:''}
-        <button class="edit" onclick="editCustomer(${c.id})">✏️ Edit</button>
-        <button class="del" onclick="deleteCustomer(${c.id})">🗑️ Delete</button>
-      </div>
-    </div>
-  `).join('');
-}
-render();
+    `).join('');
+  };
 </script>
 </body>
 </html>
