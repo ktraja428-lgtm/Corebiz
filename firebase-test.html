@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase Test</title>
+</head>
+<body>
+  <h1>Firebase Connection Test</h1>
+  <p id="status">Checking...</p>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
+      authDomain: "corebiz-f7762.firebaseapp.com",
+      projectId: "corebiz-f7762",
+      storageBucket: "corebiz-f7762.firebasestorage.app",
+      messagingSenderId: "928975624139",
+      appId: "1:928975624139:web:e4702718d71d568630484e",
+      measurementId: "G-0K6BHR19YF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function testConnection() {
+      try {
+        const docRef = await addDoc(collection(db, "test"), {
+          message: "Hello Firebase",
+          time: new Date().toString()
+        });
+        document.getElementById("status").innerText = "✅ SUCCESS! Firestore se connect ho gaya. Doc ID: " + docRef.id;
+      } catch (e) {
+        document.getElementById("status").innerText = "❌ ERROR: " + e.message;
+      }
+    }
+
+    testConnection();
+  </script>
+</body>
+</html>
