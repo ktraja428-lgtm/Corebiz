@@ -17,7 +17,28 @@ body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:1
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="authGate" style="position:fixed;inset:0;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:system-ui,sans-serif;font-size:14px;">Checking login...</div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
+    authDomain: "corebiz-f7762.firebaseapp.com",
+    projectId: "corebiz-f7762",
+    storageBucket: "corebiz-f7762.firebasestorage.app",
+    messagingSenderId: "928975624139",
+    appId: "1:928975624139:web:c24e248984883a3a3O484e",
+    measurementId: "G-33FSED87HM"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  window.firebaseSignOut = () => { signOut(auth).then(() => { window.location.href = "login.html"; }); };
+  onAuthStateChanged(auth, (user) => {
+    if (!user) { window.location.href = "login.html"; }
+    else { const gate = document.getElementById('authGate'); if (gate) gate.style.display = 'none'; }
+  });
+</script>
+ <div id="root"></div>
  <div id="cbMenuBtn" onclick="document.getElementById('cbMenu').style.display=document.getElementById('cbMenu').style.display==='block'?'none':'block'" style="position:fixed;top:14px;right:14px;background:#1E293B;border:1px solid #334155;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;z-index:9999;color:#fff">☰</div>
 <div id="cbMenu" style="display:none;position:fixed;top:64px;right:14px;background:#1E293B;border:1px solid #334155;border-radius:12px;padding:8px;z-index:9999;min-width:170px;box-shadow:0 8px 24px rgba(0,0,0,0.5)">
 <a href="customers.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">👥 Customers</a>
@@ -70,7 +91,7 @@ function Login({onLogin}){
 }
 
 function App(){
-  const[loggedIn,setLoggedIn]=React.useState(localStorage.getItem('cbLoggedIn')==='1');
+  const[loggedIn,setLoggedIn]=React.useState(true);
   const[role,setRole]=React.useState("CEO");
   const[targetOn,setTargetOn]=React.useState(false);
   const[tasks,setTasks]=React.useState(Object.fromEntries(ROLES.map(r=>[r.key,DATA[r.key].tasks.map((t,i)=>({text:t,done:false,id:i}))])));
@@ -98,7 +119,7 @@ function App(){
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:10,color:"#475569"}}>{today()}</span>
-          <button onClick={()=>setLoggedIn(false)} style={{background:"#0F172A",border:"1px solid #334155",borderRadius:7,padding:"4px 10px",color:"#64748B",fontSize:10,cursor:"pointer"}}>🔒 Logout</button>
+          <button onClick={()=>{if(window.firebaseSignOut)window.firebaseSignOut();}} style={{background:"#0F172A",border:"1px solid #334155",borderRadius:7,padding:"4px 10px",color:"#64748B",fontSize:10,cursor:"pointer"}}>🔒 Logout</button>
         </div>
       </div>
 
