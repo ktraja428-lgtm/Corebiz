@@ -54,6 +54,13 @@
       <label>Email</label>
       <input type="email" id="email" placeholder="aapka@email.com" required>
 
+      <div id="businessFields" style="display:none">
+        <label>Business Name</label>
+        <input type="text" id="businessName" placeholder="Jaise: Juta Company">
+        <label>Phone Number</label>
+        <input type="tel" id="phone" placeholder="10 digit mobile number">
+      </div>
+
       <label>Password</label>
       <input type="password" id="password" placeholder="Kam se kam 6 characters" required minlength="6">
 
@@ -75,6 +82,7 @@
     signInWithEmailAndPassword,
     sendPasswordResetEmail
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
@@ -82,12 +90,13 @@
     projectId: "corebiz-f7762",
     storageBucket: "corebiz-f7762.firebasestorage.app",
     messagingSenderId: "928975624139",
-    appId: "1:928975624139:web:c24e248984883a3a30484e",
+    appId: "1:928975624139:web:c24e248984883a3a3O484e",
     measurementId: "G-33FSED87HM"
   };
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  const db = getFirestore(app);
 
   let isSignup = false;
 
@@ -101,6 +110,9 @@
   const toggleModeText = document.getElementById('toggleModeText');
   const modeSubtitle = document.getElementById('modeSubtitle');
   const forgotLink = document.getElementById('forgotLink');
+  const businessFields = document.getElementById('businessFields');
+  const businessNameInput = document.getElementById('businessName');
+  const phoneInput = document.getElementById('phone');
 
   function showError(msg) {
     errorBox.textContent = msg;
@@ -138,11 +150,13 @@
       modeSubtitle.textContent = 'Naya CoreBiz account banayein';
       toggleModeText.innerHTML = 'Pehle se account hai? <span id="toggleModeBtn">Login karein</span>';
       forgotLink.style.display = 'none';
+      businessFields.style.display = 'block';
     } else {
       submitBtn.textContent = 'Login karein';
       modeSubtitle.textContent = 'Apne business dashboard me login karein';
       toggleModeText.innerHTML = 'Naya account banana hai? <span id="toggleModeBtn">Signup karein</span>';
       forgotLink.style.display = 'block';
+      businessFields.style.display = 'none';
     }
     document.getElementById('toggleModeBtn').addEventListener('click', () => toggleModeBtn.click());
   });
@@ -171,7 +185,20 @@
 
     try {
       if (isSignup) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const businessName = businessNameInput.value.trim();
+        const phone = phoneInput.value.trim();
+        if (!businessName || !phone) {
+          showError('Business Name aur Phone Number dono zaroori hai.');
+          submitBtn.disabled = false;
+          return;
+        }
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, 'users', cred.user.uid, 'profile', 'info'), {
+          businessName: businessName,
+          phone: phone,
+          email: email,
+          createdAt: new Date().toISOString()
+        });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
