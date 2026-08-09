@@ -68,174 +68,223 @@
 
       <button type="submit" class="primary" id="submitBtn">Login karein</button>
     </form>
-   <div id="bizTypeModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:999; align-items:center; justify-content:center;">
-  <div style="background:#1E293B; border-radius:20px; padding:28px 22px; max-width:340px; width:90%; text-align:center;">
-    <div style="font-size:20px; font-weight:800; color:#fff; margin-bottom:6px;">Aapka Business Kaisa Hai?</div>
-    <div style="font-size:13px; color:#94A3B8; margin-bottom:20px;">Isse hum aapko sahi features dikhayenge</div>
 
-    <button id="btnSmallBiz" style="width:100%; background:#F59E0B; color:#0F172A; border:none; padding:16px; border-radius:12px; font-weight:700; font-size:15px; margin-bottom:12px;">
-      🏪 Chhota Business
-    </button>
-    <button id="btnLargeBiz" style="width:100%; background:transparent; border:1px solid #334155; color:#fff; padding:16px; border-radius:12px; font-weight:700; font-size:15px; margin-bottom:20px;">
-      🏢 Badi Company
-    </button>
+    <div id="bizTypeModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; z-index:999;">
+      <div style="background:#1E293B; border-radius:20px; padding:28px 22px; max-width:340px; width:90%; text-align:center;">
+        <div style="font-size:20px; font-weight:800; color:#fff; margin-bottom:6px;">Aapka Business Kaisa Hai?</div>
+        <div style="font-size:13px; color:#94A3B8; margin-bottom:20px;">Isse hum aapko sahi features dikhayenge</div>
 
-    <label style="font-size:13px; color:#CBD5E1; display:block; text-align:left; margin-bottom:6px;">Business Category</label>
-    <select id="bizCategory" style="width:100%; background:#0F172A; border:1px solid #334155; color:#fff; padding:12px 14px; border-radius:10px; font-size:15px; margin-bottom:20px;">
-      <option value="kirana">Kirana Store</option>
-      <option value="restaurant">Restaurant</option>
-      <option value="salon">Salon/Beauty</option>
-      <option value="clothing">Clothing</option>
-      <option value="electronics">Electronics</option>
-      <option value="services">Services</option>
-      <option value="other">Other</option>
-    </select>
+        <button id="btnSmallBiz" style="width:100%; background:#F59E0B; color:#0F172A; border:none; padding:16px; border-radius:10px; font-size:15px; font-weight:700; margin-bottom:12px;">
+          🏪 Chhota Business
+        </button>
+        <button id="btnLargeBiz" style="width:100%; background:transparent; border:1px solid #334155; color:#fff; padding:16px; border-radius:10px; font-size:15px; font-weight:700; margin-bottom:20px;">
+          🏢 Badi Company
+        </button>
 
-    <button id="btnConfirmBiz" style="width:100%; background:#34D399; color:#0F172A; border:none; padding:14px; border-radius:10px; font-weight:700; font-size:15px;">
-      Confirm Karein
-    </button>
-  </div>
-</div>
+        <label style="font-size:13px; color:#CBD5E1; display:block; text-align:left; margin-bottom:6px;">Business Category</label>
+        <select id="bizCategory" style="width:100%; background:#0F172A; border:1px solid #334155; color:#fff; padding:12px 14px; border-radius:10px; font-size:15px; margin-bottom:20px;">
+          <option value="kirana">Kirana Store</option>
+          <option value="restaurant">Restaurant</option>
+          <option value="salon">Salon/Beauty</option>
+          <option value="clothing">Clothing</option>
+          <option value="electronics">Electronics</option>
+          <option value="services">Services</option>
+          <option value="other">Other</option>
+        </select>
+
+        <button id="btnConfirmBiz" style="width:100%; background:#34D399; color:#0F172A; border:none; padding:14px; border-radius:10px; font-size:15px; font-weight:700;">
+          Confirm Karein
+        </button>
+      </div>
+    </div>
 
     <div class="toggle" id="toggleModeText">
       Naya account banana hai? <span id="toggleModeBtn">Signup karein</span>
     </div>
   </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-  import {
-    getAuth,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    sendPasswordResetEmail
-  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
-    authDomain: "corebiz-f7762.firebaseapp.com",
-    projectId: "corebiz-f7762",
-    storageBucket: "corebiz-f7762.firebasestorage.app",
-    messagingSenderId: "928975624139",
-    appId: "1:928975624139:web:c24e248984883a3a3O484e",
-    measurementId: "G-33FSED87HM"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  let isSignup = false;
-
-  const form = document.getElementById('authForm');
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-  const submitBtn = document.getElementById('submitBtn');
-  const errorBox = document.getElementById('errorBox');
-  const successBox = document.getElementById('successBox');
-  const toggleModeBtn = document.getElementById('toggleModeBtn');
-  const toggleModeText = document.getElementById('toggleModeText');
-  const modeSubtitle = document.getElementById('modeSubtitle');
-  const forgotLink = document.getElementById('forgotLink');
-  const businessFields = document.getElementById('businessFields');
-  const businessNameInput = document.getElementById('businessName');
-  const phoneInput = document.getElementById('phone');
-
-  function showError(msg) {
-    errorBox.textContent = msg;
-    errorBox.style.display = 'block';
-    successBox.style.display = 'none';
-  }
-  function showSuccess(msg) {
-    successBox.textContent = msg;
-    successBox.style.display = 'block';
-    errorBox.style.display = 'none';
-  }
-  function clearMessages() {
-    errorBox.style.display = 'none';
-    successBox.style.display = 'none';
-  }
-
-  function friendlyError(code) {
-    const map = {
-      'auth/invalid-email': 'Email sahi format me nahi hai.',
-      'auth/user-not-found': 'Ye email registered nahi hai. Signup karein.',
-      'auth/wrong-password': 'Password galat hai.',
-      'auth/invalid-credential': 'Email ya password galat hai.',
-      'auth/email-already-in-use': 'Ye email already registered hai. Login karein.',
-      'auth/weak-password': 'Password kam se kam 6 characters ka hona chahiye.',
-      'auth/too-many-requests': 'Bahut zyada attempts ho gaye. Thodi der baad try karein.'
+    const firebaseConfig = {
+      apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
+      authDomain: "corebiz-f7762.firebaseapp.com",
+      projectId: "corebiz-f7762",
+      storageBucket: "corebiz-f7762.firebasestorage.app",
+      messagingSenderId: "928975624139",
+      appId: "1:928975624139:web:c24e248984883a3a30484e",
+      measurementId: "G-33FSED87HM"
     };
-    return map[code] || 'Kuch galat ho gaya. Dobara try karein.';
-  }
 
-  toggleModeBtn.addEventListener('click', () => {
-    isSignup = !isSignup;
-    clearMessages();
-    if (isSignup) {
-      submitBtn.textContent = 'Account banayein';
-      modeSubtitle.textContent = 'Naya CoreBiz account banayein';
-      toggleModeText.innerHTML = 'Pehle se account hai? <span id="toggleModeBtn">Login karein</span>';
-      forgotLink.style.display = 'none';
-      businessFields.style.display = 'block';
-    } else {
-      submitBtn.textContent = 'Login karein';
-      modeSubtitle.textContent = 'Apne business dashboard me login karein';
-      toggleModeText.innerHTML = 'Naya account banana hai? <span id="toggleModeBtn">Signup karein</span>';
-      forgotLink.style.display = 'block';
-      businessFields.style.display = 'none';
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let isSignup = false;
+
+    const form = document.getElementById('authForm');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorBox = document.getElementById('errorBox');
+    const successBox = document.getElementById('successBox');
+    const toggleModeBtn = document.getElementById('toggleModeBtn');
+    const toggleModeText = document.getElementById('toggleModeText');
+    const modeSubtitle = document.getElementById('modeSubtitle');
+    const forgotLink = document.getElementById('forgotLink');
+    const businessFields = document.getElementById('businessFields');
+    const businessNameInput = document.getElementById('businessName');
+    const phoneInput = document.getElementById('phone');
+    const bizTypeModal = document.getElementById('bizTypeModal');
+    const btnSmallBiz = document.getElementById('btnSmallBiz');
+    const btnLargeBiz = document.getElementById('btnLargeBiz');
+    const bizCategorySelect = document.getElementById('bizCategory');
+    const btnConfirmBiz = document.getElementById('btnConfirmBiz');
+    let selectedBizType = null;
+    let newUserUid = null;
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.style.display = 'block';
+      successBox.style.display = 'none';
     }
-    document.getElementById('toggleModeBtn').addEventListener('click', () => toggleModeBtn.click());
-  });
-
-  forgotLink.addEventListener('click', async () => {
-    clearMessages();
-    const email = emailInput.value.trim();
-    if (!email) {
-      showError('Pehle apna email daalein, phir "Password bhool gaye" dabayein.');
-      return;
+    function showSuccess(msg) {
+      successBox.textContent = msg;
+      successBox.style.display = 'block';
+      errorBox.style.display = 'none';
     }
-    try {
-      await sendPasswordResetEmail(auth, email);
-      showSuccess('Reset link aapke email pe bhej di gayi hai.');
-    } catch (err) {
-      showError(friendlyError(err.code));
+    function clearMessages() {
+      errorBox.style.display = 'none';
+      successBox.style.display = 'none';
     }
-  });
+    function friendlyError(code) {
+      const map = {
+        'auth/invalid-email': 'Email sahi format me nahi hai.',
+        'auth/user-not-found': 'Ye email registered nahi hai. Signup karein.',
+        'auth/wrong-password': 'Password galat hai.',
+        'auth/invalid-credential': 'Email ya password galat hai.',
+        'auth/email-already-in-use': 'Ye email already registered hai. Login karein.',
+        'auth/weak-password': 'Password kam se kam 6 characters ka hona chahiye.',
+        'auth/too-many-requests': 'Bahut zyada attempts ho gaye. Thodi der baad try karein.'
+      };
+      return map[code] || 'Kuch galat ho gaya. Dobara try karein.';
+    }
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    clearMessages();
-    submitBtn.disabled = true;
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-
-    try {
+    toggleModeBtn.addEventListener('click', () => {
+      isSignup = !isSignup;
+      clearMessages();
       if (isSignup) {
-        const businessName = businessNameInput.value.trim();
-        const phone = phoneInput.value.trim();
-        if (!businessName || !phone) {
-          showError('Business Name aur Phone Number dono zaroori hai.');
-          submitBtn.disabled = false;
-          return;
-        }
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, 'users', cred.user.uid, 'profile', 'info'), {
-          businessName: businessName,
-          phone: phone,
-          email: email,
-          createdAt: new Date().toISOString()
-        });
+        submitBtn.textContent = 'Account banayein';
+        modeSubtitle.textContent = 'Naya CoreBiz account banayein';
+        toggleModeText.innerHTML = 'Pehle se account hai? <span id="toggleModeBtn">Login karein</span>';
+        forgotLink.style.display = 'none';
+        businessFields.style.display = 'block';
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        submitBtn.textContent = 'Login karein';
+        modeSubtitle.textContent = 'Apne business dashboard me login karein';
+        toggleModeText.innerHTML = 'Naya account banana hai? <span id="toggleModeBtn">Signup karein</span>';
+        forgotLink.style.display = 'block';
+        businessFields.style.display = 'none';
       }
-      window.location.href = 'index.html';
-    } catch (err) {
-      showError(friendlyError(err.code));
-      submitBtn.disabled = false;
-    }
-  });
-</script>
+      document.getElementById('toggleModeBtn').addEventListener('click', () => toggleModeBtn.click());
+    });
+
+    forgotLink.addEventListener('click', async () => {
+      clearMessages();
+      const email = emailInput.value.trim();
+      if (!email) {
+        showError('Pehle apna email daalein, phir "Password bhool gaye" dabayein.');
+        return;
+      }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        showSuccess('Reset link aapke email pe bhej di gayi hai.');
+      } catch (err) {
+        showError(friendlyError(err.code));
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearMessages();
+      submitBtn.disabled = true;
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      try {
+        if (isSignup) {
+          const businessName = businessNameInput.value.trim();
+          const phone = phoneInput.value.trim();
+          if (!businessName || !phone) {
+            showError('Business Name aur Phone Number dono zaroori hai.');
+            submitBtn.disabled = false;
+            return;
+          }
+          const cred = await createUserWithEmailAndPassword(auth, email, password);
+          newUserUid = cred.user.uid;
+          await setDoc(doc(db, 'users', cred.user.uid, 'profile', 'info'), {
+            businessName: businessName,
+            phone: phone,
+            email: email,
+            createdAt: new Date().toISOString()
+          });
+          submitBtn.disabled = false;
+          bizTypeModal.style.display = 'flex';
+          return;
+        } else {
+          await signInWithEmailAndPassword(auth, email, password);
+        }
+        window.location.href = 'index.html';
+      } catch (err) {
+        showError(friendlyError(err.code));
+        submitBtn.disabled = false;
+      }
+    });
+
+    btnSmallBiz.addEventListener('click', () => {
+      selectedBizType = 'chhota';
+      btnSmallBiz.style.background = '#F59E0B';
+      btnSmallBiz.style.color = '#0F172A';
+      btnSmallBiz.style.border = 'none';
+      btnLargeBiz.style.background = 'transparent';
+      btnLargeBiz.style.color = '#fff';
+      btnLargeBiz.style.border = '1px solid #334155';
+    });
+
+    btnLargeBiz.addEventListener('click', () => {
+      selectedBizType = 'bada';
+      btnLargeBiz.style.background = '#F59E0B';
+      btnLargeBiz.style.color = '#0F172A';
+      btnLargeBiz.style.border = 'none';
+      btnSmallBiz.style.background = 'transparent';
+      btnSmallBiz.style.color = '#fff';
+      btnSmallBiz.style.border = '1px solid #334155';
+    });
+
+    btnConfirmBiz.addEventListener('click', async () => {
+      if (!selectedBizType) {
+        alert('Pehle Chhota Business ya Badi Company chunein.');
+        return;
+      }
+      btnConfirmBiz.disabled = true;
+      try {
+        await setDoc(doc(db, 'users', newUserUid, 'profile', 'info'), {
+          businessType: selectedBizType,
+          businessCategory: bizCategorySelect.value
+        }, { merge: true });
+        window.location.href = 'index.html';
+      } catch (err) {
+        alert('Kuch galat ho gaya, dobara try karein.');
+        btnConfirmBiz.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
