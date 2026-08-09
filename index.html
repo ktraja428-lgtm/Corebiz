@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
@@ -21,6 +21,7 @@ body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:1
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
     authDomain: "corebiz-f7762.firebaseapp.com",
@@ -32,10 +33,17 @@ body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:1
   };
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  const db = getFirestore(app);
   window.firebaseSignOut = () => { signOut(auth).then(() => { window.location.href = "login.html"; }); };
-  onAuthStateChanged(auth, (user) => {
-    if (!user) { window.location.href = "login.html"; }
-    else { const gate = document.getElementById('authGate'); if (gate) gate.style.display = 'none'; }
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = "login.html"; return; }
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid, 'profile', 'info'));
+      window.CB_BUSINESS_TYPE = (snap.exists() && snap.data().businessType) ? snap.data().businessType : 'chhota';
+    } catch (e) {
+      window.CB_BUSINESS_TYPE = 'chhota';
+    }
+    const gate = document.getElementById('authGate'); if (gate) gate.style.display = 'none';
   });
 </script>
  <div id="root"></div>
@@ -92,6 +100,7 @@ function Login({onLogin}){
 
 function App(){
   const[loggedIn,setLoggedIn]=React.useState(true);
+  const[bizType]=React.useState(window.CB_BUSINESS_TYPE||'chhota');
   const[role,setRole]=React.useState("CEO");
   const[targetOn,setTargetOn]=React.useState(false);
   const[tasks,setTasks]=React.useState(Object.fromEntries(ROLES.map(r=>[r.key,DATA[r.key].tasks.map((t,i)=>({text:t,done:false,id:i}))])));
@@ -104,6 +113,7 @@ function App(){
   const myTasks=tasks[role];
   const done=myTasks.filter(t=>t.done).length;
   const target=TARGETS[role];
+  const visibleStats=data.stats.filter(s=>bizType!=='chhota'||s.l!=="Team");
 
   const toggle=id=>setTasks(p=>({...p,[role]:p[role].map(t=>t.id===id?{...t,done:!t.done}:t)}));
   const add=()=>{if(!newTask.trim())return;setTasks(p=>({...p,[role]:[...p[role],{text:newTask,done:false,id:Date.now()}]}));setNewTask("");};
@@ -123,7 +133,8 @@ function App(){
         </div>
       </div>
 
-      {/* Role Tabs */}
+      {/* Role Tabs — sirf Badi Company ke liye */}
+      {bizType!=='chhota'&&(
       <div style={{background:"#1E293B",borderBottom:"1px solid #334155",padding:"8px 10px",display:"flex",gap:6,overflowX:"auto"}}>
         {ROLES.map(r=>(
           <button key={r.key} onClick={()=>setRole(r.key)} style={S.btn(r.color,role===r.key)}>
@@ -132,6 +143,7 @@ function App(){
           </button>
         ))}
       </div>
+      )}
 
       <div style={{padding:14,maxWidth:500,margin:"0 auto"}}>
 
@@ -139,14 +151,14 @@ function App(){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
           <div style={{width:42,height:42,borderRadius:11,background:R.color+"22",border:`2px solid ${R.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{R.icon}</div>
           <div>
-            <div style={{fontSize:16,fontWeight:800}}>{R.label} Dashboard</div>
+            <div style={{fontSize:16,fontWeight:800}}>{bizType==='chhota'?"Mera Business":R.label+" Dashboard"}</div>
             <div style={{fontSize:10,color:"#64748B"}}>Aaj ka hisaab · {today()}</div>
           </div>
         </div>
 
         {/* Stats */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-          {data.stats.map((s,i)=>(
+          {visibleStats.map((s,i)=>(
             <div key={i} style={S.card}>
               <div style={{fontSize:10,color:"#64748B",marginBottom:4}}>{s.l}</div>
               <div style={{fontSize:19,fontWeight:800}}>{s.v}</div>
@@ -155,8 +167,8 @@ function App(){
           ))}
         </div>
 
-        {/* CEO Target Panel */}
-        {role==="CEO"&&(
+        {/* CEO Target Panel — sirf Badi Company ke liye */}
+        {role==="CEO"&&bizType!=='chhota'&&(
           <div style={{...S.card,marginBottom:14}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
               <div>
