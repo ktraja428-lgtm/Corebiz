@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoreBiz - Settings</title>
+<meta name="theme-color" content="#0F172A">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:100vh}
+</style>
+</head>
+<body>
+<div id="authGate" style="position:fixed;inset:0;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;z-index:99999;font-size:14px;">Checking login...</div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
+    authDomain: "corebiz-f7762.firebaseapp.com",
+    projectId: "corebiz-f7762",
+    storageBucket: "corebiz-f7762.firebasestorage.app",
+    messagingSenderId: "928975624139",
+    appId: "1:928975624139:web:c24e248984883a3a3O484e",
+    measurementId: "G-33FSED87HM"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  window.CB_DB = db;
+  window.CB_DOC = doc; window.CB_GETDOC = getDoc; window.CB_SETDOC = setDoc;
+  window.firebaseSignOut = () => { signOut(auth).then(() => { window.location.href = "login.html"; }); };
+  window.CB_RESET_PASSWORD = () => {
+    if (!window.CB_EMAIL) return;
+    sendPasswordResetEmail(auth, window.CB_EMAIL).then(()=>{
+      alert('Reset link aapke email pe bhej di gayi hai.');
+    }).catch(()=>{ alert('Kuch galat ho gaya, dobara try karo.'); });
+  };
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = "login.html"; return; }
+    window.CB_UID = user.uid;
+    window.CB_EMAIL = user.email;
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid, 'profile', 'info'));
+      const d = snap.exists() ? snap.data() : {};
+      window.CB_BUSINESS_TYPE = d.businessType || 'chhota';
+      window.CB_BUSINESS_NAME = d.businessName || '';
+      window.CB_BUSINESS_PHONE = d.phone || '';
+      window.CB_BUSINESS_CATEGORY = d.businessCategory || 'other';
+    } catch (e) {
+      window.CB_BUSINESS_TYPE = 'chhota'; window.CB_BUSINESS_NAME=''; window.CB_BUSINESS_PHONE=''; window.CB_BUSINESS_CATEGORY='other';
+    }
+    const gate = document.getElementById('authGate'); if (gate) gate.style.display = 'none';
+    window.CB_READY = true;
+    window.dispatchEvent(new Event('cbReady'));
+  });
+</script>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const CATEGORIES=[{v:"kirana",l:"Kirana Store"},{v:"restaurant",l:"Restaurant"},{v:"salon",l:"Salon/Beauty"},{v:"clothing",l:"Clothing"},{v:"electronics",l:"Electronics"},{v:"services",l:"Services"},{v:"other",l:"Other"}];
+const S = {
+  card:{background:"#1E293B",borderRadius:12,padding:"14px",border:"1px solid #334155",marginBottom:12},
+  input:{width:"100%",background:"#0F172A",border:"1px solid #334155",color:"#fff",padding:"10px 12px",borderRadius:8,fontSize:14,marginBottom:10},
+  label:{fontSize:12,color:"#94A3B8",display:"block",marginBottom:5},
+  btn:{background:"#F59E0B",border:"none",borderRadius:9,padding:"12px",color:"#0F172A",fontWeight:800,fontSize:14,cursor:"pointer",width:"100%"},
+  btnGhost:{background:"#0F172A",border:"1px solid #334155",borderRadius:9,padding:"12px",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",width:"100%"}
+};
+
+function App(){
+  const[ready,setReady]=React.useState(!!window.CB_READY);
+  const[bizName,setBizName]=React.useState('');
+  const[bizPhone,setBizPhone]=React.useState('');
+  const[bizCategory,setBizCategory]=React.useState('other');
+  const[bizType,setBizType]=React.useState('chhota');
+  const[email,setEmail]=React.useState('');
+  const[saving,setSaving]=React.useState(false);
+  const[savedMsg,setSavedMsg]=React.useState('');
+
+  React.useEffect(()=>{
+    function init(){
+      setBizName(window.CB_BUSINESS_NAME||'');
+      setBizPhone(window.CB_BUSINESS_PHONE||'');
+      setBizCategory(window.CB_BUSINESS_CATEGORY||'other');
+      setBizType(window.CB_BUSINESS_TYPE||'chhota');
+      setEmail(window.CB_EMAIL||'');
+      setReady(true);
+    }
+    if(window.CB_READY) init();
+    else window.addEventListener('cbReady',init,{once:true});
+  },[]);
+
+  async function saveProfile(){
+    if(!bizName.trim()||!bizPhone.trim()){alert('Business Name aur Phone dono zaroori hai.');return;}
+    setSaving(true);
+    try{
+      await window.CB_SETDOC(window.CB_DOC(window.CB_DB,'users',window.CB_UID,'profile','info'),{
+        businessName:bizName.trim(), phone:bizPhone.trim(), businessCategory:bizCategory, businessType:bizType
+      },{merge:true});
+      setSavedMsg('✅ Save ho gaya');
+      setTimeout(()=>setSavedMsg(''),2500);
+    }catch(e){alert('Save nahi hua, dobara try karo.');}
+    setSaving(false);
+  }
+
+  function whatsappSupport(){
+    window.open('https://wa.me/919153281908?text='+encodeURIComponent('Hi CoreBiz, mujhe help chahiye.'),'_blank');
+  }
+
+  if(!ready) return <div style={{padding:20,textAlign:"center",color:"#64748B"}}>Loading...</div>;
+
+  return(
+    <div style={{minHeight:"100vh",background:"#0F172A",padding:14,maxWidth:500,margin:"0 auto"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <div style={{fontSize:20,fontWeight:900,color:"#F59E0B"}}>⚙️ Settings</div>
+        <a href="index.html" style={{color:"#64748B",fontSize:13,textDecoration:"none"}}>← Wapas</a>
+      </div>
+
+      <div style={S.card}>
+        <div style={{fontSize:14,fontWeight:800,marginBottom:10}}>Business Profile</div>
+        <label style={S.label}>Business Name</label>
+        <input style={S.input} value={bizName} onChange={e=>setBizName(e.target.value)}/>
+        <label style={S.label}>Phone Number</label>
+        <input style={S.input} value={bizPhone} onChange={e=>setBizPhone(e.target.value)}/>
+        <label style={S.label}>Business Category</label>
+        <select style={S.input} value={bizCategory} onChange={e=>setBizCategory(e.target.value)}>
+          {CATEGORIES.map(c=><option key={c.v} value={c.v}>{c.l}</option>)}
+        </select>
+        <label style={S.label}>Business Type</label>
+        <div style={{display:"flex",gap:8,marginBottom:10}}>
+          <button onClick={()=>setBizType('chhota')} style={{...S.btnGhost,background:bizType==='chhota'?"#F59E0B":"#0F172A",color:bizType==='chhota'?"#0F172A":"#94A3B8",fontWeight:800}}>🏪 Chhota Business</button>
+          <button onClick={()=>setBizType('bada')} style={{...S.btnGhost,background:bizType==='bada'?"#F59E0B":"#0F172A",color:bizType==='bada'?"#0F172A":"#94A3B8",fontWeight:800}}>🏢 Badi Company</button>
+        </div>
+        <button style={S.btn} onClick={saveProfile} disabled={saving}>{saving?"Save ho raha hai...":"Profile Save Karo"}</button>
+        {savedMsg && <div style={{textAlign:"center",color:"#10B981",fontSize:13,marginTop:8}}>{savedMsg}</div>}
+      </div>
+
+      <div style={S.card}>
+        <div style={{fontSize:14,fontWeight:800,marginBottom:10}}>Account</div>
+        <label style={S.label}>Email</label>
+        <input style={{...S.input,opacity:0.6}} value={email} disabled/>
+        <div style={{fontSize:11,color:"#64748B",marginBottom:10}}>Email badalne ke liye WhatsApp Support se contact karo.</div>
+        <button style={S.btnGhost} onClick={()=>window.CB_RESET_PASSWORD()}>🔑 Password Reset Karo</button>
+      </div>
+
+      <div style={S.card}>
+        <div style={{fontSize:14,fontWeight:800,marginBottom:10}}>Help</div>
+        <button style={{...S.btnGhost,marginBottom:10,background:"#10B981",color:"#fff",border:"none"}} onClick={whatsappSupport}>💬 WhatsApp Support</button>
+        <button style={S.btnGhost} onClick={()=>{if(window.firebaseSignOut)window.firebaseSignOut();}}>🔒 Logout</button>
+      </div>
+
+      <div style={{textAlign:"center",marginTop:14,padding:"8px",background:"#1E293B",borderRadius:9,fontSize:10,color:"#334155"}}>
+        CoreBiz · v1.0
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(<App/>,document.getElementById("root"));
+</script>
+</body>
+</html>
