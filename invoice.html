@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoreBiz - Invoice</title>
+<meta name="theme-color" content="#0F172A">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:100vh}
+input,select{font-family:inherit}
+#printArea{display:none}
+@media print{
+  body *{visibility:hidden}
+  #printArea,#printArea *{visibility:visible}
+  #printArea{display:block;position:absolute;top:0;left:0;width:100%;background:#fff;color:#000;padding:20px}
+}
+</style>
+</head>
+<body>
+<div id="authGate" style="position:fixed;inset:0;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;z-index:99999;font-size:14px;">Checking login...</div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
+    authDomain: "corebiz-f7762.firebaseapp.com",
+    projectId: "corebiz-f7762",
+    storageBucket: "corebiz-f7762.firebasestorage.app",
+    messagingSenderId: "928975624139",
+    appId: "1:928975624139:web:c24e248984883a3a3O484e",
+    measurementId: "G-33FSED87HM"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  window.CB_DB = db;
+  window.CB_DOC = doc; window.CB_GETDOC = getDoc; window.CB_SETDOC = setDoc;
+  window.CB_COL = collection; window.CB_GETDOCS = getDocs; window.CB_ADDDOC = addDoc; window.CB_TS = serverTimestamp;
+  window.firebaseSignOut = () => { signOut(auth).then(() => { window.location.href = "login.html"; }); };
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = "login.html"; return; }
+    window.CB_UID = user.uid;
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid, 'profile', 'info'));
+      const d = snap.exists() ? snap.data() : {};
+      window.CB_BUSINESS_TYPE = d.businessType || 'chhota';
+      window.CB_BUSINESS_NAME = d.businessName || '';
+      window.CB_BUSINESS_PHONE = d.phone || '';
+      window.CB_BUSINESS_CATEGORY = d.businessCategory || 'other';
+    } catch (e) {
+      window.CB_BUSINESS_TYPE = 'chhota'; window.CB_BUSINESS_NAME = ''; window.CB_BUSINESS_PHONE=''; window.CB_BUSINESS_CATEGORY='other';
+    }
+    const gate = document.getElementById('authGate'); if (gate) gate.style.display = 'none';
+    window.CB_READY = true;
+    window.dispatchEvent(new Event('cbReady'));
+  });
+</script>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const CATEGORY_GST = { kirana:5, restaurant:5, salon:18, clothing:12, electronics:18, services:18, other:18 };
+const S = {
+  card:{background:"#1E293B",borderRadius:12,padding:"14px",border:"1px solid #334155",marginBottom:12},
+  input:{width:"100%",background:"#0F172A",border:"1px solid #334155",color:"#fff",padding:"10px 12px",borderRadius:8,fontSize:14,marginBottom:10},
+  label:{fontSize:12,color:"#94A3B8",display:"block",marginBottom:5},
+  btn:{background:"#F59E0B",border:"none",borderRadius:9,padding:"12px",color:"#0F172A",fontWeight:800,fontSize:14,cursor:"pointer",width:"100%"},
+  btnGhost:{background:"#0F172A",border:"1px solid #334155",borderRadius:9,padding:"12px",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",width:"100%"}
+};
+
+function App(){
+  const[ready,setReady]=React.useState(!!window.CB_READY);
+  const[bizType,setBizType]=React.useState('chhota');
+  const[bizName,setBizName]=React.useState('');
+  const[bizPhone,setBizPhone]=React.useState('');
+  const[bizCategory,setBizCategory]=React.useState('other');
+  const[customers,setCustomers]=React.useState([]);
+  const[custId,setCustId]=React.useState('');
+  const[custName,setCustName]=React.useState('');
+  const[custPhone,setCustPhone]=React.useState('');
+  const[showNewCust,setShowNewCust]=React.useState(false);
+  const[gstMode,setGstMode]=React.useState(true);
+  const[placeOfSupply,setPlaceOfSupply]=React.useState('');
+  const[items,setItems]=React.useState([{name:"",qty:1,price:0,gst:18,hsn:""}]);
+  const[savedInvoice,setSavedInvoice]=React.useState(null);
+  const[saving,setSaving]=React.useState(false);
+
+  React.useEffect(()=>{
+    function init(){
+      setBizType(window.CB_BUSINESS_TYPE||'chhota');
+      setBizName(window.CB_BUSINESS_NAME||'');
+      setBizPhone(window.CB_BUSINESS_PHONE||'');
+      setBizCategory(window.CB_BUSINESS_CATEGORY||'other');
+      const defGst=CATEGORY_GST[window.CB_BUSINESS_CATEGORY]||18;
+      setItems([{name:"",qty:1,price:0,gst:defGst,hsn:""}]);
+      loadCustomers();
+      setReady(true);
+    }
+    if(window.CB_READY) init();
+    else window.addEventListener('cbReady',init,{once:true});
+  },[]);
+
+  async function loadCustomers(){
+    try{
+      const snap=await window.CB_GETDOCS(window.CB_COL(window.CB_DB,'users',window.CB_UID,'customers'));
+      const list=[];
+      snap.forEach(d=>list.push({id:d.id,...d.data()}));
+      setCustomers(list);
+    }catch(e){}
+  }
+
+  async function addNewCustomer(){
+    if(!custName.trim()||!custPhone.trim()){alert('Naam aur Phone dono zaroori hai.');return;}
+    try{
+      const ref=await window.CB_ADDDOC(window.CB_COL(window.CB_DB,'users',window.CB_UID,'customers'),{name:custName.trim(),phone:custPhone.trim(),createdAt:window.CB_TS()});
+      await loadCustomers();
+      setCustId(ref.id);
+      setShowNewCust(false);
+    }catch(e){alert('Customer save nahi hua, dobara try karo.');}
+  }
+
+  function updateItem(i,field,val){
+    setItems(p=>p.map((it,idx)=>idx===i?{...it,[field]:val}:it));
+  }
+  function addItemRow(){
+    const defGst=CATEGORY_GST[bizCategory]||18;
+    setItems(p=>[...p,{name:"",qty:1,price:0,gst:defGst,hsn:""}]);
+  }
+  function removeItemRow(i){
+    setItems(p=>p.filter((_,idx)=>idx!==i));
+  }
+
+  const calc=items.map(it=>{
+    const base=(Number(it.qty)||0)*(Number(it.price)||0);
+    const gstAmt=gstMode?base*(Number(it.gst)||0)/100:0;
+    return {...it,base,gstAmt,total:base+gstAmt};
+  });
+  const subtotal=calc.reduce((s,it)=>s+it.base,0);
+  const totalGst=calc.reduce((s,it)=>s+it.gstAmt,0);
+  const grandTotal=subtotal+totalGst;
+
+  async function generateInvoice(){
+    if(!custName&&!custId){alert('Customer select ya add karo.');return;}
+    if(items.length===0||!items.some(it=>it.name.trim())){alert('Kam se kam ek item daalo.');return;}
+    setSaving(true);
+    try{
+      const counterRef=window.CB_DOC(window.CB_DB,'users',window.CB_UID,'counters','invoice');
+      const counterSnap=await window.CB_GETDOC(counterRef);
+      const nextNum=(counterSnap.exists()?(counterSnap.data().value||0):0)+1;
+      await window.CB_SETDOC(counterRef,{value:nextNum});
+      const invNumber='INV-'+String(nextNum).padStart(3,'0');
+      const selectedCust=customers.find(c=>c.id===custId);
+      const finalCustName=selectedCust?selectedCust.name:custName;
+      const finalCustPhone=selectedCust?selectedCust.phone:custPhone;
+      const invoiceData={
+        invNumber, date:new Date().toISOString(), gstMode,
+        bizName,bizPhone,bizCategory,placeOfSupply,
+        custName:finalCustName,custPhone:finalCustPhone,
+        items:calc.map(it=>({name:it.name,qty:it.qty,price:it.price,gst:gstMode?it.gst:0,hsn:it.hsn,base:it.base,gstAmt:it.gstAmt,total:it.total})),
+        subtotal,totalGst,grandTotal
+      };
+      await window.CB_ADDDOC(window.CB_COL(window.CB_DB,'users',window.CB_UID,'invoices'),{...invoiceData,createdAt:window.CB_TS()});
+      setSavedInvoice(invoiceData);
+    }catch(e){alert('Invoice save nahi hua: '+e.message);}
+    setSaving(false);
+  }
+
+  function shareOnWhatsapp(){
+    if(!savedInvoice)return;
+    let msg=`*${savedInvoice.bizName||'CoreBiz'}*\nInvoice: ${savedInvoice.invNumber}\nDate: ${new Date(savedInvoice.date).toLocaleDateString('en-IN')}\n\n`;
+    savedInvoice.items.forEach(it=>{
+      msg+=`${it.name} x${it.qty} = ₹${it.total.toFixed(2)}\n`;
+    });
+    msg+=`\nTotal: ₹${savedInvoice.grandTotal.toFixed(2)}`;
+    if(savedInvoice.gstMode) msg+=` (GST incl.)`;
+    const phone=(savedInvoice.custPhone||'').replace(/\D/g,'');
+    const url=`https://wa.me/${phone?('91'+phone.slice(-10)):''}?text=${encodeURIComponent(msg)}`;
+    window.open(url,'_blank');
+  }
+
+  function printInvoice(){
+    window.print();
+  }
+
+  function newInvoice(){
+    setSavedInvoice(null);
+    setCustId('');setCustName('');setCustPhone('');setShowNewCust(false);
+    const defGst=CATEGORY_GST[bizCategory]||18;
+    setItems([{name:"",qty:1,price:0,gst:defGst,hsn:""}]);
+    setPlaceOfSupply('');
+  }
+
+  if(!ready) return <div style={{padding:20,textAlign:"center",color:"#64748B"}}>Loading...</div>;
+
+  if(savedInvoice){
+    return(
+      <div style={{minHeight:"100vh",background:"#0F172A",padding:14,maxWidth:500,margin:"0 auto"}}>
+        <div style={S.card}>
+          <div style={{fontSize:18,fontWeight:800,marginBottom:4,color:"#10B981"}}>✅ Invoice Ban Gaya</div>
+          <div style={{fontSize:13,color:"#94A3B8",marginBottom:12}}>{savedInvoice.invNumber}</div>
+          <div style={{fontSize:24,fontWeight:900,marginBottom:14}}>₹{savedInvoice.grandTotal.toFixed(2)}</div>
+          <button style={{...S.btn,marginBottom:10}} onClick={printInvoice}>🖨️ Print / Save PDF</button>
+          <button style={{...S.btnGhost,marginBottom:10,background:"#10B981",color:"#fff",border:"none"}} onClick={shareOnWhatsapp}>💬 WhatsApp Bhejo</button>
+          <button style={S.btnGhost} onClick={newInvoice}>+ Naya Invoice</button>
+        </div>
+
+        <div id="printArea">
+          <div style={{textAlign:"center",marginBottom:16,borderBottom:"2px solid #000",paddingBottom:10}}>
+            <div style={{fontSize:20,fontWeight:900}}>{savedInvoice.bizName||'Business Name'}</div>
+            <div style={{fontSize:12}}>{savedInvoice.bizPhone}</div>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:14,fontSize:13}}>
+            <div>
+              <div><b>Invoice:</b> {savedInvoice.invNumber}</div>
+              <div><b>Date:</b> {new Date(savedInvoice.date).toLocaleDateString('en-IN')}</div>
+              {savedInvoice.gstMode && savedInvoice.placeOfSupply && <div><b>Place of Supply:</b> {savedInvoice.placeOfSupply}</div>}
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div><b>Bill To:</b></div>
+              <div>{savedInvoice.custName}</div>
+              <div>{savedInvoice.custPhone}</div>
+            </div>
+          </div>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:14}}>
+            <thead>
+              <tr style={{borderBottom:"2px solid #000"}}>
+                <td style={{padding:"6px 4px"}}><b>Item</b></td>
+                {savedInvoice.gstMode && savedInvoice.items.some(it=>it.hsn) && <td style={{padding:"6px 4px"}}><b>HSN</b></td>}
+                <td style={{padding:"6px 4px",textAlign:"center"}}><b>Qty</b></td>
+                <td style={{padding:"6px 4px",textAlign:"right"}}><b>Price</b></td>
+                {savedInvoice.gstMode && <td style={{padding:"6px 4px",textAlign:"right"}}><b>GST%</b></td>}
+                <td style={{padding:"6px 4px",textAlign:"right"}}><b>Total</b></td>
+              </tr>
+            </thead>
+            <tbody>
+              {savedInvoice.items.map((it,i)=>(
+                <tr key={i} style={{borderBottom:"1px solid #ccc"}}>
+                  <td style={{padding:"6px 4px"}}>{it.name}</td>
+                  {savedInvoice.gstMode && savedInvoice.items.some(x=>x.hsn) && <td style={{padding:"6px 4px"}}>{it.hsn}</td>}
+                  <td style={{padding:"6px 4px",textAlign:"center"}}>{it.qty}</td>
+                  <td style={{padding:"6px 4px",textAlign:"right"}}>₹{Number(it.price).toFixed(2)}</td>
+                  {savedInvoice.gstMode && <td style={{padding:"6px 4px",textAlign:"right"}}>{it.gst}%</td>}
+                  <td style={{padding:"6px 4px",textAlign:"right"}}>₹{it.total.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{textAlign:"right",fontSize:13}}>
+            <div>Subtotal: ₹{savedInvoice.subtotal.toFixed(2)}</div>
+            {savedInvoice.gstMode && <div>GST: ₹{savedInvoice.totalGst.toFixed(2)}</div>}
+            <div style={{fontSize:16,fontWeight:900,marginTop:6}}>Grand Total: ₹{savedInvoice.grandTotal.toFixed(2)}</div>
+          </div>
+          <div style={{textAlign:"center",marginTop:24,fontSize:11,color:"#666"}}>Generated via CoreBiz</div>
+        </div>
+      </div>
+    );
+  }
+
+  return(
+    <div style={{minHeight:"100vh",background:"#0F172A",padding:14,maxWidth:500,margin:"0 auto"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <div style={{fontSize:20,fontWeight:900,color:"#F59E0B"}}>🧾 Naya Invoice</div>
+        <a href="index.html" style={{color:"#64748B",fontSize:13,textDecoration:"none"}}>← Wapas</a>
+      </div>
+
+      <div style={S.card}>
+        <div style={{display:"flex",gap:8,marginBottom:4}}>
+          <button onClick={()=>setGstMode(true)} style={{...S.btnGhost,background:gstMode?"#F59E0B":"#0F172A",color:gstMode?"#0F172A":"#94A3B8",fontWeight:800}}>GST Bill</button>
+          <button onClick={()=>setGstMode(false)} style={{...S.btnGhost,background:!gstMode?"#F59E0B":"#0F172A",color:!gstMode?"#0F172A":"#94A3B8",fontWeight:800}}>Simple Bill</button>
+        </div>
+      </div>
+
+      <div style={S.card}>
+        <div style={{fontSize:14,fontWeight:800,marginBottom:10}}>Customer</div>
+        {!showNewCust ? (
+          <>
+            <label style={S.label}>Existing Customer Chuno</label>
+            <select style={S.input} value={custId} onChange={e=>{setCustId(e.target.value);setCustName('');setCustPhone('');}}>
+              <option value="">-- Select Karo --</option>
+              {customers.map(c=><option key={c.id} value={c.id}>{c.name} ({c.phone})</option>)}
+            </select>
+            <button style={S.btnGhost} onClick={()=>setShowNewCust(true)}>+ Naya Customer</button>
+          </>
+        ):(
+          <>
+            <label style={S.label}>Naam</label>
+            <input style={S.input} value={custName} onChange={e=>setCustName(e.target.value)} placeholder="Customer ka naam"/>
+            <label style={S.label}>Phone</label>
+            <input style={S.input} value={custPhone} onChange={e=>setCustPhone(e.target.value)} placeholder="10 digit number"/>
+            <div style={{display:"flex",gap:8}}>
+              <button style={{...S.btn,flex:1}} onClick={addNewCustomer}>Save Karo</button>
+              <button style={{...S.btnGhost,flex:1}} onClick={()=>setShowNewCust(false)}>Cancel</button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {gstMode && bizType!=='chhota' && (
+        <div style={S.card}>
+          <label style={S.label}>Place of Supply (State)</label>
+          <input style={S.input} value={placeOfSupply} onChange={e=>setPlaceOfSupply(e.target.value)} placeholder="Jaise: Bihar"/>
+        </div>
+      )}
+
+      <div style={S.card}>
+        <div style={{fontSize:14,fontWeight:800,marginBottom:10}}>Items</div>
+        {items.map((it,i)=>(
+          <div key={i} style={{background:"#0F172A",borderRadius:8,padding:10,marginBottom:8,border:"1px solid #334155"}}>
+            <input style={S.input} value={it.name} onChange={e=>updateItem(i,'name',e.target.value)} placeholder="Item ka naam"/>
+            <div style={{display:"flex",gap:8}}>
+              <div style={{flex:1}}>
+                <label style={S.label}>Qty</label>
+                <input type="number" style={S.input} value={it.qty} onChange={e=>updateItem(i,'qty',e.target.value)}/>
+              </div>
+              <div style={{flex:1}}>
+                <label style={S.label}>Price ₹</label>
+                <input type="number" style={S.input} value={it.price} onChange={e=>updateItem(i,'price',e.target.value)}/>
+              </div>
+              {gstMode && <div style={{flex:1}}>
+                <label style={S.label}>GST %</label>
+                <input type="number" style={S.input} value={it.gst} onChange={e=>updateItem(i,'gst',e.target.value)}/>
+              </div>}
+            </div>
+            {gstMode && bizType!=='chhota' && (
+              <input style={S.input} value={it.hsn} onChange={e=>updateItem(i,'hsn',e.target.value)} placeholder="HSN Code (optional)"/>
+            )}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:12,color:"#64748B"}}>Line Total: ₹{((Number(it.qty)||0)*(Number(it.price)||0)*(gstMode?1+(Number(it.gst)||0)/100:1)).toFixed(2)}</span>
+              {items.length>1 && <button onClick={()=>removeItemRow(i)} style={{background:"none",border:"none",color:"#F87171",fontSize:12,cursor:"pointer"}}>Hatao</button>}
+            </div>
+          </div>
+        ))}
+        <button style={S.btnGhost} onClick={addItemRow}>+ Item Jodo</button>
+      </div>
+
+      <div style={S.card}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4,color:"#94A3B8"}}>
+          <span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span>
+        </div>
+        {gstMode && <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4,color:"#94A3B8"}}>
+          <span>GST</span><span>₹{totalGst.toFixed(2)}</span>
+        </div>}
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:18,fontWeight:900,marginTop:8,borderTop:"1px solid #334155",paddingTop:8}}>
+          <span>Grand Total</span><span>₹{grandTotal.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <button style={S.btn} onClick={generateInvoice} disabled={saving}>{saving?"Ban raha hai...":"Invoice Banao"}</button>
+    </div>
+  );
+}
+
+ReactDOM.render(<App/>,document.getElementById("root"));
+</script>
+</body>
+</html>
