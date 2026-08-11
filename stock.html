@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoreBiz - Stock</title>
+<meta name="theme-color" content="#0F172A">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:100vh}
+</style>
+</head>
+<body>
+<div id="authGate" style="position:fixed;inset:0;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;z-index:99999;font-size:14px;">Checking login...</div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
+    authDomain: "corebiz-f7762.firebaseapp.com",
+    projectId: "corebiz-f7762",
+    storageBucket: "corebiz-f7762.firebasestorage.app",
+    messagingSenderId: "928975624139",
+    appId: "1:928975624139:web:c24e248984883a3a3O484e",
+    measurementId: "G-33FSED87HM"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  window.CB_DB = db;
+  window.CB_DOC = doc; window.CB_GETDOC = getDoc; window.CB_SETDOC = setDoc; window.CB_DELDOC = deleteDoc;
+  window.CB_COL = collection; window.CB_GETDOCS = getDocs; window.CB_ADDDOC = addDoc; window.CB_TS = serverTimestamp;
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = "login.html"; return; }
+    window.CB_UID = user.uid;
+    const gate = document.getElementById('authGate'); if (gate) gate.style.display = 'none';
+    window.CB_READY = true;
+    window.dispatchEvent(new Event('cbReady'));
+  });
+</script>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const S = {
+  card:{background:"#1E293B",borderRadius:12,padding:"14px",border:"1px solid #334155",marginBottom:12},
+  input:{width:"100%",background:"#0F172A",border:"1px solid #334155",color:"#fff",padding:"10px 12px",borderRadius:8,fontSize:14,marginBottom:10},
+  label:{fontSize:12,color:"#94A3B8",display:"block",marginBottom:5},
+  btn:{background:"#F59E0B",border:"none",borderRadius:9,padding:"12px",color:"#0F172A",fontWeight:800,fontSize:14,cursor:"pointer",width:"100%"},
+  btnGhost:{background:"#0F172A",border:"1px solid #334155",borderRadius:9,padding:"12px",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",width:"100%"}
+};
+
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const d=new Date(dateStr); const now=new Date();
+  return Math.ceil((d-now)/(1000*60*60*24));
+}
+
+function App(){
+  const[ready,setReady]=React.useState(!!window.CB_READY);
+  const[products,setProducts]=React.useState([]);
+  const[salesCount,setSalesCount]=React.useState({});
+  const[showForm,setShowForm]=React.useState(false);
+  const[editId,setEditId]=React.useState(null);
+  const[name,setName]=React.useState('');
+  const[price,setPrice]=React.useState('');
+  const[qty,setQty]=React.useState('');
+  const[threshold,setThreshold]=React.useState('5');
+  const[expiry,setExpiry]=React.useState('');
+  const[saving,setSaving]=React.useState(false);
+
+  React.useEffect(()=>{
+    function init(){ loadAll(); }
+    if(window.CB_READY) init();
+    else window.addEventListener('cbReady',init,{once:true});
+  },[]);
+
+  async function loadAll(){
+    try{
+      const psnap=await window.CB_GETDOCS(window.CB_COL(window.CB_DB,'users',window.CB_UID,'products'));
+      const plist=[]; psnap.forEach(d=>plist.push({id:d.id,...d.data()}));
+      setProducts(plist);
+
+      const isnap=await window.CB_GETDOCS(window.CB_COL(window.CB_DB,'users',window.CB_UID,'invoices'));
+      const counts={};
+      isnap.forEach(d=>{
+        const inv=d.data();
+        (inv.items||[]).forEach(it=>{
+          const key=(it.name||'').trim().toLowerCase();
+          if(!key) return;
+          counts[key]=(counts[key]||0)+(Number(it.qty)||0);
+        });
+      });
+      setSalesCount(counts);
+    }catch(e){}
+    setReady(true);
+  }
+
+  function resetForm(){
+    setEditId(null); setName(''); setPrice(''); setQty(''); setThreshold('5'); setExpiry(''); setShowForm(false);
+  }
+
+  function editProduct(p){
+    setEditId(p.id); setName(p.name); setPrice(p.price); setQty(p.stockQty); setThreshold(p.lowStockThreshold||'5'); setExpiry(p.expiryDate||''); setShowForm(true);
+  }
+
+  async function saveProduct(){
+    if(!name.trim()){alert('Product ka naam zaroori hai.');return;}
+    setSaving(true);
+    try{
+      const data={
+        name:name.trim(), price:Number(price)||0, stockQty:Number(qty)||0,
+        lowStockThreshold:Number(threshold)||5, expiryDate:expiry||null
+      };
+      if(editId){
+        await window.CB_SETDOC(window.CB_DOC(window.CB_DB,'users',window.CB_UID,'products',editId),data,{merge:true});
+      }else{
+        await window.CB_ADDDOC(window.CB_COL(window.CB_DB,'users',window.CB_UID,'products'),{...data,createdAt:window.CB_TS()});
+      }
+      resetForm();
+      loadAll();
+    }catch(e){alert('Save nahi hua: '+e.message);}
+    setSaving(false);
+  }
+
+  async function deleteProduct(id){
+    if(!confirm('Ye product hatana hai?'))return;
+    try{
+      await window.CB_DELDOC(window.CB_DOC(window.CB_DB,'users',window.CB_UID,'products',id));
+      loadAll();
+    }catch(e){alert('Delete nahi hua.');}
+  }
+
+  const withSales=products.map(p=>({...p,sold:salesCount[(p.name||'').trim().toLowerCase()]||0}));
+  const lowStock=withSales.filter(p=>p.stockQty<=p.lowStockThreshold);
+  const expiringItems=withSales.filter(p=>{
+    const d=daysUntil(p.expiryDate);
+    return d!==null && d<=7;
+  });
+  const sortedBySales=[...withSales].sort((a,b)=>b.sold-a.sold);
+  const fastMoving=sortedBySales.filter(p=>p.sold>0).slice(0,5);
+  const slowMoving=[...withSales].filter(p=>p.sold===0);
+
+  if(!ready) return <div style={{padding:20,textAlign:"center",color:"#64748B"}}>Loading...</div>;
+
+  return(
+    <div style={{minHeight:"100vh",background:"#0F172A",padding:14,maxWidth:500,margin:"0 auto"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <div style={{fontSize:20,fontWeight:900,color:"#F59E0B"}}>📦 Stock</div>
+        <a href="index.html" style={{color:"#64748B",fontSize:13,textDecoration:"none"}}>← Wapas</a>
+      </div>
+
+      {lowStock.length>0 && (
+        <div style={{...S.card,border:"1px solid #F87171"}}>
+          <div style={{fontSize:13,fontWeight:800,color:"#F87171",marginBottom:6}}>⚠️ Kam Stock ({lowStock.length})</div>
+          {lowStock.map(p=>(
+            <div key={p.id} style={{fontSize:12,color:"#CBD5E1",marginBottom:3}}>{p.name} — sirf {p.stockQty} bacha hai</div>
+          ))}
+        </div>
+      )}
+
+      {expiringItems.length>0 && (
+        <div style={{...S.card,border:"1px solid #F59E0B"}}>
+          <div style={{fontSize:13,fontWeight:800,color:"#F59E0B",marginBottom:6}}>⏰ Jaldi Kharab Hone Wala ({expiringItems.length})</div>
+          {expiringItems.map(p=>{
+            const d=daysUntil(p.expiryDate);
+            return <div key={p.id} style={{fontSize:12,color:"#CBD5E1",marginBottom:3}}>{p.name} — {d<0?"Expire ho gaya":d===0?"Aaj expire":`${d} din baaki`}</div>;
+          })}
+        </div>
+      )}
+
+      {fastMoving.length>0 && (
+        <div style={S.card}>
+          <div style={{fontSize:13,fontWeight:800,color:"#10B981",marginBottom:6}}>🔥 Fast-Moving (Sabse Zyada Bikne Wale)</div>
+          {fastMoving.map(p=>(
+            <div key={p.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#CBD5E1",marginBottom:3}}>
+              <span>{p.name}</span><span style={{color:"#10B981"}}>{p.sold} bike</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {slowMoving.length>0 && (
+        <div style={S.card}>
+          <div style={{fontSize:13,fontWeight:800,color:"#64748B",marginBottom:6}}>🐢 Slow-Moving (Kabhi Nahi Bike)</div>
+          {slowMoving.map(p=>(
+            <div key={p.id} style={{fontSize:12,color:"#94A3B8",marginBottom:3}}>{p.name}</div>
+          ))}
+        </div>
+      )}
+
+      <div style={S.card}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{fontSize:14,fontWeight:800}}>Saare Products</div>
+          <button onClick={()=>{resetForm();setShowForm(true);}} style={{background:"#F59E0B",border:"none",borderRadius:8,padding:"6px 12px",color:"#0F172A",fontWeight:800,fontSize:12,cursor:"pointer"}}>+ Naya</button>
+        </div>
+
+        {showForm && (
+          <div style={{background:"#0F172A",borderRadius:8,padding:10,marginBottom:10,border:"1px solid #334155"}}>
+            <label style={S.label}>Product Naam</label>
+            <input style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Jaise: Chai Patti"/>
+            <div style={{display:"flex",gap:8}}>
+              <div style={{flex:1}}>
+                <label style={S.label}>Price ₹</label>
+                <input type="number" style={S.input} value={price} onChange={e=>setPrice(e.target.value)}/>
+              </div>
+              <div style={{flex:1}}>
+                <label style={S.label}>Stock Qty</label>
+                <input type="number" style={S.input} value={qty} onChange={e=>setQty(e.target.value)}/>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <div style={{flex:1}}>
+                <label style={S.label}>Low Stock Alert</label>
+                <input type="number" style={S.input} value={threshold} onChange={e=>setThreshold(e.target.value)}/>
+              </div>
+              <div style={{flex:1}}>
+                <label style={S.label}>Expiry Date (optional)</label>
+                <input type="date" style={S.input} value={expiry} onChange={e=>setExpiry(e.target.value)}/>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button style={{...S.btn,flex:1}} onClick={saveProduct} disabled={saving}>{saving?"Save ho raha...":"Save Karo"}</button>
+              <button style={{...S.btnGhost,flex:1}} onClick={resetForm}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {products.length===0 && !showForm && (
+          <div style={{textAlign:"center",color:"#475569",fontSize:12,padding:10}}>Koi product nahi hai. "+ Naya" dabao.</div>
+        )}
+
+        {products.map(p=>{
+          const d=daysUntil(p.expiryDate);
+          const isLow=p.stockQty<=p.lowStockThreshold;
+          return(
+            <div key={p.id} style={{background:"#0F172A",borderRadius:8,padding:10,marginBottom:8,border:`1px solid ${isLow?"#F87171":"#334155"}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{fontSize:14,fontWeight:700}}>{p.name}</div>
+                <div style={{fontSize:14,fontWeight:800,color:"#F59E0B"}}>₹{p.price}</div>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:isLow?"#F87171":"#64748B",marginTop:4}}>
+                <span>Stock: {p.stockQty} {isLow?"⚠️":""}</span>
+                {p.expiryDate && <span>Expiry: {p.expiryDate} {d!==null&&d<=7?"⏰":""}</span>}
+              </div>
+              <div style={{display:"flex",gap:10,marginTop:8}}>
+                <button onClick={()=>editProduct(p)} style={{background:"none",border:"none",color:"#38BDF8",fontSize:12,cursor:"pointer"}}>Edit</button>
+                <button onClick={()=>deleteProduct(p.id)} style={{background:"none",border:"none",color:"#F87171",fontSize:12,cursor:"pointer"}}>Hatao</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(<App/>,document.getElementById("root"));
+</script>
+</body>
+</html>
