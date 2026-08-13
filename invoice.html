@@ -83,6 +83,7 @@ function App(){
   const[custId,setCustId]=React.useState('');
   const[custName,setCustName]=React.useState('');
   const[custPhone,setCustPhone]=React.useState('');
+  const[referredBy,setReferredBy]=React.useState('');
   const[showNewCust,setShowNewCust]=React.useState(false);
   const[gstMode,setGstMode]=React.useState(true);
   const[placeOfSupply,setPlaceOfSupply]=React.useState('');
@@ -117,10 +118,11 @@ function App(){
   async function addNewCustomer(){
     if(!custName.trim()||!custPhone.trim()){alert('Naam aur Phone dono zaroori hai.');return;}
     try{
-      const ref=await window.CB_ADDDOC(window.CB_COL(window.CB_DB,'users',window.CB_UID,'customers'),{name:custName.trim(),phone:custPhone.trim(),createdAt:window.CB_TS()});
+      const ref=await window.CB_ADDDOC(window.CB_COL(window.CB_DB,'users',window.CB_UID,'customers'),{name:custName.trim(),phone:custPhone.trim(),referredBy:referredBy.trim()||null,createdAt:window.CB_TS()});
       await loadCustomers();
       setCustId(ref.id);
       setShowNewCust(false);
+      setReferredBy('');
     }catch(e){alert('Customer save nahi hua, dobara try karo.');}
   }
 
@@ -292,6 +294,8 @@ function App(){
             <input style={S.input} value={custName} onChange={e=>setCustName(e.target.value)} placeholder="Customer ka naam"/>
             <label style={S.label}>Phone</label>
             <input style={S.input} value={custPhone} onChange={e=>setCustPhone(e.target.value)} placeholder="10 digit number"/>
+            <label style={S.label}>Kisne Bheja (optional)</label>
+            <input style={S.input} value={referredBy} onChange={e=>setReferredBy(e.target.value)} placeholder="Jaise: Ramesh"/>
             <div style={{display:"flex",gap:8}}>
               <button style={{...S.btn,flex:1}} onClick={addNewCustomer}>Save Karo</button>
               <button style={{...S.btnGhost,flex:1}} onClick={()=>setShowNewCust(false)}>Cancel</button>
