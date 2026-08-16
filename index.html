@@ -21,7 +21,7 @@ body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:1
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
     authDomain: "corebiz-f7762.firebaseapp.com",
@@ -37,11 +37,28 @@ body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:1
   window.firebaseSignOut = () => { signOut(auth).then(() => { window.location.href = "login.html"; }); };
   onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = "login.html"; return; }
+    window.CB_UID = user.uid;
     try {
       const snap = await getDoc(doc(db, 'users', user.uid, 'profile', 'info'));
       window.CB_BUSINESS_TYPE = (snap.exists() && snap.data().businessType) ? snap.data().businessType : 'chhota';
     } catch (e) {
       window.CB_BUSINESS_TYPE = 'chhota';
+    }
+    try {
+      const todayStr = new Date().toISOString().slice(0,10);
+      const tsnap = await getDocs(collection(db, 'users', user.uid, 'transactions'));
+      let inc=0, exp=0, has=false;
+      tsnap.forEach(d=>{
+        const t=d.data();
+        if(t.date===todayStr){ has=true; if(t.type==='income') inc+=Number(t.amount)||0; else exp+=Number(t.amount)||0; }
+      });
+      window.CB_TODAY_HAS_ENTRY = has;
+      window.CB_TODAY_INCOME = inc;
+      window.CB_TODAY_EXPENSE = exp;
+    } catch (e) {
+      window.CB_TODAY_HAS_ENTRY = true;
+      window.CB_TODAY_INCOME = 0;
+      window.CB_TODAY_EXPENSE = 0;
     }
     const gate = document.getElementById('authGate'); if (gate) gate.style.display = 'none';
   });
@@ -55,8 +72,8 @@ body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:1
   <a href="settings.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">⚙️ Settings</a>
 <a href="reports.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">📊 Reports</a>
 <a href="stock.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">📦 Stock</a>
-  <a href="expense.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">💰 Hisaab</a>
-  <a href="calculator.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">🧮 Calculator</a>
+<a href="expense.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">💰 Hisaab</a>
+<a href="calculator.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">🧮 Calculator</a>
 </div>
 <script type="text/babel">
 const ROLES=[{key:"CEO",label:"CEO",icon:"👑",color:"#F59E0B"},{key:"SALES",label:"Sales",icon:"💼",color:"#3B82F6"},{key:"MARKETING",label:"Marketing",icon:"📣",color:"#8B5CF6"},{key:"HR",label:"HR",icon:"👥",color:"#10B981"},{key:"FINANCE",label:"Finance",icon:"💰",color:"#F97316"},{key:"OPERATIONS",label:"Operations",icon:"⚙️",color:"#EC4899"}];
@@ -107,6 +124,9 @@ function Login({onLogin}){
 function App(){
   const[loggedIn,setLoggedIn]=React.useState(true);
   const[bizType]=React.useState(window.CB_BUSINESS_TYPE||'chhota');
+  const[hasEntry]=React.useState(window.CB_TODAY_HAS_ENTRY!==false);
+  const[todayIncome]=React.useState(window.CB_TODAY_INCOME||0);
+  const[todayExpense]=React.useState(window.CB_TODAY_EXPENSE||0);
   const[role,setRole]=React.useState("CEO");
   const[targetOn,setTargetOn]=React.useState(false);
   const[tasks,setTasks]=React.useState(Object.fromEntries(ROLES.map(r=>[r.key,DATA[r.key].tasks.map((t,i)=>({text:t,done:false,id:i}))])));
@@ -123,6 +143,10 @@ function App(){
 
   const toggle=id=>setTasks(p=>({...p,[role]:p[role].map(t=>t.id===id?{...t,done:!t.done}:t)}));
   const add=()=>{if(!newTask.trim())return;setTasks(p=>({...p,[role]:[...p[role],{text:newTask,done:false,id:Date.now()}]}));setNewTask("");};
+  const sendWhatsappReport=()=>{
+    const msg=`📊 Aaj Ka Report\n\nKamai: ₹${todayIncome}\nKharcha: ₹${todayExpense}\nBacha: ₹${todayIncome-todayExpense}`;
+    window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  };
 
   return(
     <div style={{minHeight:"100vh",background:"#0F172A",color:"#fff",fontFamily:"system-ui,sans-serif"}}>
@@ -137,6 +161,16 @@ function App(){
           <span style={{fontSize:10,color:"#475569"}}>{today()}</span>
           <button onClick={()=>{if(window.firebaseSignOut)window.firebaseSignOut();}} style={{background:"#0F172A",border:"1px solid #334155",borderRadius:7,padding:"4px 10px",color:"#64748B",fontSize:10,cursor:"pointer"}}>🔒 Logout</button>
         </div>
+      </div>
+
+      {!hasEntry && (
+        <div style={{background:"#78350F",borderBottom:"1px solid #F59E0B",padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontSize:12,color:"#FDE68A"}}>⚠️ Aaj ka hisaab abhi likha nahi</span>
+          <a href="expense.html" style={{fontSize:12,color:"#F59E0B",fontWeight:800,textDecoration:"none"}}>Likho →</a>
+        </div>
+      )}
+      <div style={{padding:"10px 14px"}}>
+        <button onClick={sendWhatsappReport} style={{width:"100%",background:"#10B981",border:"none",borderRadius:9,padding:11,color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer"}}>💬 Aaj Ka Report WhatsApp Pe Bhejo</button>
       </div>
 
       {/* Role Tabs — sirf Badi Company ke liye */}
