@@ -11,12 +11,13 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:100vh}
+input{font-family:inherit}
 </style>
 </head>
 <body>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, collection, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
     authDomain: "corebiz-f7762.firebaseapp.com",
@@ -30,7 +31,7 @@ body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:1
   const db = getFirestore(app);
   window.CB_DB = db;
   window.CB_DOC = doc; window.CB_GETDOC = getDoc;
-  window.CB_COL = collection; window.CB_GETDOCS = getDocs;
+  window.CB_COL = collection; window.CB_GETDOCS = getDocs; window.CB_ADDDOC = addDoc; window.CB_TS = serverTimestamp;
   window.CB_READY = true;
   window.dispatchEvent(new Event('cbReady'));
 </script>
@@ -40,6 +41,9 @@ body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:1
 <script type="text/babel">
 const S = {
   card:{background:"#1E293B",borderRadius:12,padding:"14px",border:"1px solid #334155",marginBottom:12},
+  input:{width:"100%",background:"#0F172A",border:"1px solid #334155",color:"#fff",padding:"10px 12px",borderRadius:8,fontSize:14,marginBottom:10},
+  label:{fontSize:12,color:"#94A3B8",display:"block",marginBottom:5},
+  btn:{background:"#F59E0B",border:"none",borderRadius:9,padding:"12px",color:"#0F172A",fontWeight:800,fontSize:14,cursor:"pointer",width:"100%"},
 };
 
 function getUid(){
@@ -52,6 +56,12 @@ function App(){
   const[notFound,setNotFound]=React.useState(false);
   const[biz,setBiz]=React.useState(null);
   const[products,setProducts]=React.useState([]);
+  const[cart,setCart]=React.useState({});
+  const[showOrderForm,setShowOrderForm]=React.useState(false);
+  const[custName,setCustName]=React.useState('');
+  const[custPhone,setCustPhone]=React.useState('');
+  const[placing,setPlacing]=React.useState(false);
+  const[orderDone,setOrderDone]=React.useState(false);
   const uid = getUid();
 
   React.useEffect(()=>{
@@ -73,6 +83,41 @@ function App(){
     setLoading(false);
   }
 
+  function changeQty(pid, delta){
+    setCart(p=>{
+      const cur=p[pid]||0;
+      const next=Math.max(0, cur+delta);
+      const copy={...p};
+      if(next===0) delete copy[pid]; else copy[pid]=next;
+      return copy;
+    });
+  }
+
+  const cartItems = products.filter(p=>cart[p.id]>0).map(p=>({...p, qty:cart[p.id]}));
+  const cartTotal = cartItems.reduce((s,it)=>s+it.qty*(Number(it.price)||0),0);
+  const cartCount = cartItems.reduce((s,it)=>s+it.qty,0);
+
+  async function placeOrder(){
+    if(!custName.trim()||!custPhone.trim()){alert('Naam aur Phone dono zaroori hai.');return;}
+    if(cartItems.length===0){alert('Cart khaali hai.');return;}
+    setPlacing(true);
+    try{
+      await window.CB_ADDDOC(window.CB_COL(window.CB_DB,'users',uid,'orders'),{
+        custName:custName.trim(), custPhone:custPhone.trim(),
+        items:cartItems.map(it=>({name:it.name,price:it.price,qty:it.qty})),
+        total:cartTotal, status:'pending', createdAt:window.CB_TS()
+      });
+      let msg=`🛒 Naya Order\n\nNaam: ${custName}\nPhone: ${custPhone}\n\n`;
+      cartItems.forEach(it=>{ msg+=`${it.name} x${it.qty} = ₹${it.qty*it.price}\n`; });
+      msg+=`\nTotal: ₹${cartTotal}`;
+      const bizPhone=(biz.phone||'').replace(/\D/g,'');
+      window.open(`https://wa.me/91${bizPhone.slice(-10)}?text=${encodeURIComponent(msg)}`,'_blank');
+      setOrderDone(true);
+      setCart({});
+    }catch(e){ alert('Order bhejne mein dikkat hui: '+e.message); }
+    setPlacing(false);
+  }
+
   function whatsappContact(){
     const phone=(biz.phone||'').replace(/\D/g,'');
     window.open(`https://wa.me/91${phone.slice(-10)}?text=${encodeURIComponent('Hi, mujhe aapke products ke baare mein jaankari chahiye.')}`,'_blank');
@@ -81,8 +126,19 @@ function App(){
   if(loading) return <div style={{padding:20,textAlign:"center",color:"#64748B"}}>Loading...</div>;
   if(notFound) return <div style={{padding:20,textAlign:"center",color:"#64748B"}}>Ye catalog nahi mila.</div>;
 
+  if(orderDone){
+    return(
+      <div style={{minHeight:"100vh",background:"#0F172A",padding:14,maxWidth:500,margin:"0 auto",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
+        <div style={{fontSize:48,marginBottom:12}}>✅</div>
+        <div style={{fontSize:20,fontWeight:800,marginBottom:8}}>Order Bhej Diya Gaya</div>
+        <div style={{fontSize:13,color:"#94A3B8",marginBottom:20}}>Dukaandar tak aapka order pahunch gaya hai. WhatsApp pe bhi khul gaya hoga.</div>
+        <button style={S.btn} onClick={()=>{setOrderDone(false);setShowOrderForm(false);}}>Wapas Catalog Pe Jao</button>
+      </div>
+    );
+  }
+
   return(
-    <div style={{minHeight:"100vh",background:"#0F172A",padding:14,maxWidth:500,margin:"0 auto"}}>
+    <div style={{minHeight:"100vh",background:"#0F172A",padding:14,paddingBottom:cartCount>0?90:14,maxWidth:500,margin:"0 auto"}}>
       <div style={{textAlign:"center",padding:"20px 0"}}>
         <div style={{fontSize:40,marginBottom:8}}>🏪</div>
         <div style={{fontSize:24,fontWeight:900,color:"#F59E0B"}}>{biz.businessName||'Business'}</div>
@@ -99,18 +155,50 @@ function App(){
         <div style={{textAlign:"center",color:"#475569",fontSize:13,padding:20}}>Abhi koi product list nahi hai.</div>
       )}
 
-      {products.map(p=>(
+      {!showOrderForm && products.map(p=>(
         <div key={p.id} style={S.card}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:cart[p.id]?10:0}}>
             <div style={{fontSize:15,fontWeight:700}}>{p.name}</div>
             <div style={{fontSize:16,fontWeight:800,color:"#F59E0B"}}>₹{p.price}</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <button onClick={()=>changeQty(p.id,-1)} style={{width:32,height:32,borderRadius:8,border:"1px solid #334155",background:"#0F172A",color:"#fff",fontSize:16,cursor:"pointer"}}>−</button>
+            <span style={{fontSize:14,fontWeight:700,minWidth:20,textAlign:"center"}}>{cart[p.id]||0}</span>
+            <button onClick={()=>changeQty(p.id,1)} style={{width:32,height:32,borderRadius:8,border:"none",background:"#F59E0B",color:"#0F172A",fontSize:16,fontWeight:800,cursor:"pointer"}}>+</button>
           </div>
         </div>
       ))}
 
+      {showOrderForm && (
+        <div style={S.card}>
+          <div style={{fontSize:14,fontWeight:800,marginBottom:10}}>Order Details</div>
+          {cartItems.map(it=>(
+            <div key={it.id} style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#CBD5E1",marginBottom:4}}>
+              <span>{it.name} x{it.qty}</span><span>₹{it.qty*it.price}</span>
+            </div>
+          ))}
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:900,marginTop:8,borderTop:"1px solid #334155",paddingTop:8,marginBottom:14}}>
+            <span>Total</span><span style={{color:"#F59E0B"}}>₹{cartTotal}</span>
+          </div>
+          <label style={S.label}>Aapka Naam</label>
+          <input style={S.input} value={custName} onChange={e=>setCustName(e.target.value)} placeholder="Naam likho"/>
+          <label style={S.label}>Phone Number</label>
+          <input style={S.input} value={custPhone} onChange={e=>setCustPhone(e.target.value)} placeholder="10 digit number"/>
+          <button style={S.btn} onClick={placeOrder} disabled={placing}>{placing?"Bhej raha hai...":"Order Confirm Karo"}</button>
+        </div>
+      )}
+
       <div style={{textAlign:"center",marginTop:20,padding:"10px",fontSize:11,color:"#334155"}}>
         Powered by CoreBiz
       </div>
+
+      {cartCount>0 && !showOrderForm && (
+        <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#1E293B",borderTop:"1px solid #334155",padding:14}}>
+          <div style={{maxWidth:500,margin:"0 auto"}}>
+            <button style={S.btn} onClick={()=>setShowOrderForm(true)}>🛒 {cartCount} Item Cart Mein — ₹{cartTotal} — Order Karo</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
