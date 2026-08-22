@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>पोस्टर बनाएं - Dukaan AI Kit</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#E8871E">
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+body{background:#FBF6EC;color:#1F2937;font-family:system-ui,sans-serif;min-height:100vh;}
+#app{max-width:500px;margin:0 auto;min-height:100vh;padding-bottom:96px;}
+::-webkit-scrollbar{display:none;}
+
+.topbar{background:linear-gradient(135deg,#1F2937,#2C3B58);color:#fff;padding:16px 16px 20px;}
+.brandrow{display:flex;align-items:center;justify-content:space-between;}
+.brand{display:flex;align-items:center;gap:10px;}
+.bname{font-weight:800;font-size:16px;}
+.btag{font-size:10px;color:#C9D1DC;}
+.backbtn{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;}
+
+.tabs{display:flex;gap:8px;padding:0 16px;margin-top:14px;}
+.tab{flex:1;text-align:center;padding:10px;border-radius:12px;background:rgba(255,255,255,.1);color:#C9D1DC;font-weight:700;font-size:12.5px;border:none;}
+.tab.active{background:#E8871E;color:#fff;}
+
+main{padding:16px;}
+.panel{display:none;}
+.panel.active{display:block;}
+.section-title{font-weight:700;font-size:14.5px;margin:16px 0 10px;display:flex;align-items:center;gap:6px;}
+.step-num{width:20px;height:20px;border-radius:50%;background:#E8871E;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+.preview{border-radius:20px;padding:26px 18px;text-align:center;color:#fff;position:relative;overflow:hidden;min-height:320px;display:flex;flex-direction:column;justify-content:center;margin-bottom:16px;box-shadow:0 10px 24px rgba(0,0,0,.15);}
+.preview .ptag{font-size:11px;letter-spacing:2px;opacity:.85;text-transform:uppercase;font-weight:700;}
+.preview .pshop{font-size:22px;font-weight:800;margin-top:8px;}
+.preview .pproduct{font-size:25px;font-weight:800;margin-top:16px;}
+.preview .pprice{font-size:38px;font-weight:800;margin-top:8px;}
+.preview .pold{font-size:15px;text-decoration:line-through;opacity:.7;margin-top:2px;}
+.preview .pfooter{font-size:11px;margin-top:18px;opacity:.9;}
+
+.tpl-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px;}
+.tpl-card{flex-shrink:0;width:82px;height:64px;border-radius:14px;border:2px solid transparent;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;text-align:center;padding:6px;}
+.tpl-card.sel{border-color:#1F2937;}
+
+.card{background:#fff;border:1px solid #E9E0CC;border-radius:16px;padding:14px;margin-bottom:14px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:12px;font-weight:700;color:#5B6472;margin-bottom:5px;}
+.field input{width:100%;padding:11px 13px;border-radius:11px;border:1.5px solid #E9E0CC;background:#fff;font-size:14px;color:#1F2937;outline:none;}
+.field input:focus{border-color:#E8871E;}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;}
+
+.btn{width:100%;border:none;padding:13px;border-radius:14px;font-weight:700;font-size:14px;margin-top:8px;color:#fff;}
+.btn-save{background:linear-gradient(135deg,#E8871E,#C96A0C);}
+.btn-wa{background:linear-gradient(135deg,#25D366,#1fb355);}
+.btn-outline{background:#fff;color:#1F2937;border:1.5px solid #E9E0CC;}
+.btn-teal{background:linear-gradient(135deg,#0B6E6E,#08504F);}
+
+.toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:#1F2937;color:#fff;padding:10px 18px;border-radius:30px;font-size:12.5px;font-weight:600;z-index:80;opacity:0;pointer-events:none;transition:opacity .25s;}
+.toast.show{opacity:1;}
+
+nav.bottomnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:#fff;border-top:1px solid #E9E0CC;display:flex;justify-content:space-around;padding:8px 4px 10px;z-index:40;}
+.navitem{display:flex;flex-direction:column;align-items:center;gap:2px;color:#5B6472;text-decoration:none;font-size:10.5px;font-weight:600;padding:6px 10px;border-radius:12px;}
+.navitem span{font-size:16px;}
+.navitem.active{color:#C96A0C;background:#FFD98E;}
+
+.upload-box{border:2px dashed #E9E0CC;border-radius:16px;padding:26px 16px;text-align:center;background:#fff;margin-bottom:14px;display:block;}
+.upload-box .t{font-weight:700;font-size:13.5px;margin-top:8px;}
+.upload-box input[type=file]{display:none;}
+
+.checker{background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0px;}
+.canvas-wrap{border-radius:18px;overflow:hidden;margin-bottom:14px;box-shadow:0 8px 20px rgba(0,0,0,.12);position:relative;}
+#finalCanvas{width:100%;display:block;touch-action:none;}
+
+.slider-row{margin-bottom:14px;}
+.slider-row label{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;color:#5B6472;margin-bottom:6px;}
+.slider-row input[type=range]{width:100%;accent-color:#E8871E;}
+
+.mode-toggle{display:flex;gap:8px;margin-bottom:14px;}
+.mode-opt{flex:1;text-align:center;padding:10px;border-radius:12px;border:1.5px solid #E9E0CC;background:#fff;font-weight:700;font-size:12px;color:#5B6472;}
+.mode-opt.sel{background:#E8871E;border-color:#E8871E;color:#fff;}
+
+.color-row{display:flex;gap:10px;align-items:center;margin-bottom:12px;}
+.color-row input[type=color]{width:44px;height:40px;border-radius:10px;border:1.5px solid #E9E0CC;padding:2px;}
+.color-row span{font-size:12.5px;font-weight:600;color:#5B6472;}
+
+.status-pill{display:flex;align-items:center;gap:8px;background:#DFF3EF;color:#08504F;padding:10px 13px;border-radius:12px;font-size:12.5px;font-weight:600;margin-bottom:12px;}
+.spinner{width:14px;height:14px;border:2px solid #08504F;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.brush-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="brandrow">
+      <div class="brand">
+        <button class="backbtn" onclick="location.href='index.html'">←</button>
+        <div>
+          <div class="bname">पोस्टर बनाएं</div>
+          <div class="btag">Poster Maker</div>
+        </div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" id="tabTextBtn" onclick="switchTab('text')">टेक्स्ट पोस्टर</button>
+      <button class="tab" id="tabPhotoBtn" onclick="switchTab('photo')">फोटो पोस्टर</button>
+    </div>
+  </div>
+
+  <main>
+
+    <!-- ================= TEXT POSTER PANEL ================= -->
+    <section class="panel active" id="panel-text">
+      <div id="previewWrap" style="margin-top:16px;"></div>
+      <div id="festivalBannerWrap"></div>
+
+      <div class="section-title">टेम्पलेट चुनें (हर त्योहार के लिए)</div>
+      <div class="tpl-scroll" id="tplScroll"></div>
+
+      <div class="card">
+        <div class="field"><label>दुकान / बिज़नेस का नाम</label><input id="pShop" placeholder="जैसे: शर्मा जनरल स्टोर" oninput="render()"></div>
+        <div class="field"><label>प्रोडक्ट / सर्विस का नाम</label><input id="pProduct" placeholder="जैसे: बासमती चावल" oninput="render()"></div>
+        <div class="field-row">
+          <div class="field"><label>नया मूल्य (₹)</label><input id="pNew" type="number" placeholder="499" oninput="render()"></div>
+          <div class="field"><label>पुराना मूल्य (₹)</label><input id="pOld" type="number" placeholder="699" oninput="render()"></div>
+        </div>
+        <div class="field"><label>ऑफर टेक्स्ट</label><input id="pOffer" placeholder="जैसे: सीमित समय के लिए!" oninput="render()"></div>
+        <div class="field-row">
+          <div class="field"><label>फ़ोन नंबर</label><input id="pPhone" placeholder="98xxxxxxxx" oninput="render()"></div>
+          <div class="field"><label>पता (छोटा)</label><input id="pAddress" placeholder="मुख्य बाज़ार" oninput="render()"></div>
+        </div>
+      </div>
+
+      <button class="btn btn-save" onclick="savePoster()">💾 पोस्टर सेव करें</button>
+      <button class="btn btn-wa" onclick="shareWhatsapp()">📲 WhatsApp पर शेयर करें</button>
+    </section>
+
+    <!-- ================= PHOTO POSTER PANEL ================= -->
+    <section class="panel" id="panel-photo">
+
+      <div class="section-title"><span class="step-num">1</span> अपनी फोटो चुनें</div>
+      <label class="upload-box" id="uploadBox">
+        <div style="font-size:26px;">📷</div>
+        <div class="t">फोटो अपलोड करने के लिए यहाँ टैप करें</div>
+        <input type="file" accept="image/*" id="photoInput" onchange="onPhotoSelected(event)">
+      </label>
+
+      <div id="photoEditorWrap" style="display:none;">
+
+        <div class="canvas-wrap checker">
+          <canvas id="finalCanvas"></canvas>
+        </div>
+
+        <div class="section-title"><span class="step-num">2</span> फोटो एडिट करें</div>
+        <div class="card">
+          <div class="slider-row"><label><span>ब्राइटनेस</span><span id="brVal">0</span></label><input type="range" id="brSlider" min="-100" max="100" value="0" oninput="applyFilters()"></div>
+          <div class="slider-row"><label><span>कॉन्ट्रास्ट</span><span id="ctVal">0</span></label><input type="range" id="ctSlider" min="-100" max="100" value="0" oninput="applyFilters()"></div>
+          <div class="slider-row" style="margin-bottom:0;"><label><span>सैचुरेशन (रंगों की गहराई)</span><span id="saVal">0</span></label><input type="range" id="saSlider" min="-100" max="100" value="0" oninput="applyFilters()"></div>
+        </div>
+        <button class="btn btn-outline" onclick="bakeFilters()">✅ एडिट फाइनल करें, आगे बढ़ें</button>
+
+        <div class="section-title"><span class="step-num">3</span> बैकग्राउंड</div>
+        <div id="bgStatusWrap"></div>
+        <button class="btn btn-teal" onclick="removeBackground()" id="removeBgBtn">✨ AI से बैकग्राउंड हटाएं (मुफ़्त)</button>
+
+        <div class="mode-toggle" style="margin-top:12px;">
+          <button class="mode-opt sel" id="bgSolidBtn" onclick="setBgMode('solid')">एक रंग</button>
+          <button class="mode-opt" id="bgGradBtn" onclick="setBgMode('gradient')">ग्रेडिएंट</button>
+          <button class="mode-opt" id="bgTransBtn" onclick="setBgMode('transparent')">बिना बैकग्राउंड</button>
+        </div>
+        <div class="color-row" id="colorRow1">
+          <input type="color" id="bgColor1" value="#E8871E" oninput="renderFinal()">
+          <span>रंग 1</span>
+        </div>
+        <div class="color-row" id="colorRow2" style="display:none;">
+          <input type="color" id="bgColor2" value="#C96A0C" oninput="renderFinal()">
+          <span>रंग 2 (ग्रेडिएंट)</span>
+        </div>
+        <div class="card">
+          <div class="slider-row" style="margin-bottom:0;"><label><span>📐 फोटो साइज़ (बड़ा / छोटा)</span><span id="photoSizeVal">100%</span></label><input type="range" id="photoSizeSlider" min="50" max="150" value="100" oninput="onPhotoSizeChange()"></div>
+        </div>
+
+        <div class="section-title"><span class="step-num">4</span> इरेज़र (हाथ से मिटाएं)</div>
+        <div class="card">
+          <div class="brush-row">
+            <span style="font-size:12.5px;font-weight:700;color:#5B6472;">ब्रश साइज़</span>
+            <input type="range" id="brushSize" min="10" max="80" value="30" style="flex:1;accent-color:#E8871E;">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="mode-opt" id="eraserBtn" style="flex:1;" onclick="toggleEraser()">🧽 इरेज़र चालू करें</button>
+            <button class="mode-opt" style="flex:1;" onclick="undoErase()">↩️ पिछला वापस</button>
+          </div>
+          <div style="font-size:11px;color:#5B6472;margin-top:8px;">इरेज़र चालू करके फोटो पर ऊँगली से घुमाएं जहाँ से हटाना है।</div>
+        </div>
+
+        <div class="section-title"><span class="step-num">5</span> टेक्स्ट जोड़ें</div>
+        <div class="card">
+          <div class="field"><label>दुकान / बिज़नेस का नाम</label><input id="phShop" placeholder="जैसे: शर्मा जनरल स्टोर" oninput="renderFinal()"></div>
+          <div class="field"><label>प्रोडक्ट का नाम</label><input id="phProduct" placeholder="जैसे: बासमती चावल" oninput="renderFinal()"></div>
+          <div class="field-row">
+            <div class="field"><label>नया मूल्य (₹)</label><input id="phNew" type="number" placeholder="499" oninput="renderFinal()"></div>
+            <div class="field"><label>पुराना मूल्य (₹)</label><input id="phOld" type="number" placeholder="699" oninput="renderFinal()"></div>
+          </div>
+          <div class="slider-row" style="margin-bottom:0;"><label><span>🔤 टेक्स्ट साइज़ (बड़ा / छोटा)</span><span id="textSizeVal">100%</span></label><input type="range" id="textSizeSlider" min="50" max="180" value="100" oninput="onTextSizeChange()"></div>
+        </div>
+
+        <div class="section-title"><span class="step-num">6</span> इमोजी लगाएं</div>
+        <div class="card">
+          <div class="tpl-scroll" style="margin-bottom:12px;">
+            <button class="tpl-card" style="background:#FFD98E;color:#1F2937;font-size:22px;" onclick="setEmoji('🎉')">🎉</button>
+            <button class="tpl-card" style="background:#FFD98E;color:#1F2937;font-size:22px;" onclick="setEmoji('🔥')">🔥</button>
+            <button class="tpl-card" style="background:#FFD98E;color:#1F2937;font-size:22px;" onclick="setEmoji('⭐')">⭐</button>
+            <button class="tpl-card" style="background:#FFD98E;color:#1F2937;font-size:22px;" onclick="setEmoji('🎁')">🎁</button>
+            <button class="tpl-card" style="background:#FFD98E;color:#1F2937;font-size:22px;" onclick="setEmoji('🏷️')">🏷️</button>
+            <button class="tpl-card" style="background:#FFD98E;color:#1F2937;font-size:22px;" onclick="setEmoji('💯')">💯</button>
+            <button class="tpl-card" style="background:#FFD98E;color:#1F2937;font-size:22px;" onclick="setEmoji('✨')">✨</button>
+            <button class="tpl-card" style="background:#FFD98E;color:#1F2937;font-size:22px;" onclick="setEmoji('❤️')">❤️</button>
+            <button class="tpl-card" style="background:#FFD98E;color:#1F2937;font-size:22px;" onclick="setEmoji('👍')">👍</button>
+          </div>
+          <div class="slider-row" style="margin-bottom:8px;"><label><span>😀 इमोजी साइज़ (बड़ा / छोटा)</span><span id="emojiSizeVal">50%</span></label><input type="range" id="emojiSizeSlider" min="0" max="100" value="50" oninput="onEmojiSizeChange()"></div>
+          <button class="btn btn-outline" style="margin-top:0;" onclick="removeEmoji()">🗑️ इमोजी हटाएं</button>
+        </div>
+
+        <div class="section-title"><span class="step-num">7</span> सेव / शेयर करें</div>
+        <button class="btn btn-save" onclick="downloadPhotoPoster()">⬇️ फोटो डाउनलोड करें</button>
+        <button class="btn btn-wa" onclick="sharePhotoPoster()">📲 WhatsApp पर शेयर करें</button>
+        <button class="btn btn-outline" onclick="resetPhotoEditor()">🔄 नई फोटो से शुरू करें</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<nav class="bottomnav">
+  <a class="navitem" href="index.html"><span>🏠</span>होम</a>
+  <a class="navitem active" href="poster.html"><span>🖼️</span>पोस्टर</a>
+  <a class="navitem" href="expense.html"><span>📈</span>बिक्री</a>
+  <a class="navitem" href="customers.html"><span>🤝</span>ग्राहक</a>
+  <a class="navitem" href="calculator.html"><span>🛠️</span>टूल्स</a>
+</nav>
+
+<script>
+/* TAB SWITCHING */
+function switchTab(tab){
+  document.getElementById('panel-text').classList.toggle('active', tab==='text');
+  document.getElementById('panel-photo').classList.toggle('active', tab==='photo');
+  document.getElementById('tabTextBtn').classList.toggle('active', tab==='text');
+  document.getElementById('tabPhotoBtn').classList.toggle('active', tab==='photo');
+}
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(window._t); window._t = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+function esc(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+/* TEXT POSTER (template based) */
+const templates = [
+  {id:'general', name:'सामान्य Sale', grad:['#E8871E','#C96A0C']},
+  {id:'discount', name:'Discount', grad:['#C0392B','#8E2A20']},
+  {id:'newarrival', name:'New Arrival', grad:['#0B6E6E','#08504F']},
+  {id:'makar_sankranti', name:'मकर संक्रांति', grad:['#F2A94A','#0B6E6E']},
+  {id:'republic', name:'26 जनवरी', grad:['#FF7A00','#0B3D91']},
+  {id:'holi', name:'होली', grad:['#E91E8C','#F2A94A']},
+  {id:'eid_fitr', name:'ईद-उल-फ़ित्र', grad:['#0B6E6E','#1F2937']},
+  {id:'bakrid', name:'बकरीद', grad:['#08504F','#1F2937']},
+  {id:'rath_yatra', name:'रथ यात्रा', grad:['#C96A0C','#E8871E']},
+  {id:'independence', name:'15 अगस्त', grad:['#FF7A00','#128807']},
+  {id:'milad_un_nabi', name:'मिलाद उन नबी', grad:['#0B6E6E','#08504F']},
+  {id:'onam', name:'ओणम', grad:['#E8871E','#128807']},
+  {id:'rakhi', name:'रक्षा बंधन', grad:['#E91E8C','#8E2ADB']},
+  {id:'janmashtami', name:'जन्माष्टमी', grad:['#1F2937','#0B3D91']},
+  {id:'ganesh_chaturthi', name:'गणेश चतुर्थी', grad:['#C0392B','#F2A94A']},
+  {id:'navratri', name:'नवरात्रि', grad:['#8E2ADB','#C0392B']},
+  {id:'dussehra', name:'दशहरा', grad:['#C0392B','#E8871E']},
+  {id:'karva_chauth', name:'करवा चौथ', grad:['#8E2ADB','#C96A0C']},
+  {id:'diwali', name:'दिवाली', grad:['#8E2ADB','#4B1E8C']},
+  {id:'chhath', name:'छठ पूजा', grad:['#C96A0C','#7A3D0A']},
+  {id:'gurpurab', name:'गुरु नानक जयंती', grad:['#C0392B','#F2A94A']},
+  {id:'christmas', name:'क्रिसमस', grad:['#128807','#C0392B']},
+  {id:'newyear', name:'नया साल', grad:['#1F2937','#E8871E']}
+];
+let selected = 'general';
+
+// Approx / official 2026 dates for auto "aane wala tyohaar" suggestion
+const FESTIVAL_DATES = {
+  makar_sankranti:'2026-01-14', republic:'2026-01-26', holi:'2026-03-04',
+  eid_fitr:'2026-03-21', bakrid:'2026-05-27', rath_yatra:'2026-07-16',
+  independence:'2026-08-15', milad_un_nabi:'2026-08-26', onam:'2026-08-26',
+  rakhi:'2026-08-28', janmashtami:'2026-09-04', ganesh_chaturthi:'2026-09-14',
+  dussehra:'2026-10-20', diwali:'2026-11-08', chhath:'2026-11-15',
+  gurpurab:'2026-11-24', christmas:'2026-12-25'
+};
+function nearestFestival(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  let best=null, bestDiff=999;
+  for(const [id,dateStr] of Object.entries(FESTIVAL_DATES)){
+    const d = new Date(dateStr+'T00:00:00');
+    const diff = Math.round((d-today)/86400000);
+    if(diff>=0 && diff<=14 && diff<bestDiff){ bestDiff=diff; best={id,diff}; }
+  }
+  return best;
+}
+function renderFestivalBanner(){
+  const wrap = document.getElementById('festivalBannerWrap');
+  if(!wrap) return;
+  const f = nearestFestival();
+  if(!f){ wrap.innerHTML=''; return; }
+  const t = templates.find(x=>x.id===f.id);
+  if(!t){ wrap.innerHTML=''; return; }
+  const label = f.diff===0 ? 'आज है' : (f.diff===1 ? 'कल है' : `${f.diff} दिन में है`);
+  wrap.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,${t.grad[0]},${t.grad[1]});color:#fff;border-radius:14px;padding:12px 14px;margin-top:14px;">
+    <div><div style="font-size:11px;opacity:.9;font-weight:700;">🎉 आने वाला त्योहार — ${label}</div><div style="font-size:15px;font-weight:800;margin-top:2px;">${esc(t.name)}</div></div>
+    <button onclick="selected='${t.id}'; renderTemplates(); render();" style="background:#fff;color:#1F2937;border:none;border-radius:20px;padding:8px 14px;font-weight:700;font-size:12px;">पोस्टर बनाएं</button>
+  </div>`;
+}
+function renderTemplates(){
+  const wrap = document.getElementById('tplScroll');
+  wrap.innerHTML = '';
+  templates.forEach(t=>{
+    const el = document.createElement('button');
+    el.className = 'tpl-card' + (t.id===selected ? ' sel' : '');
+    el.style.background = `linear-gradient(135deg, ${t.grad[0]}, ${t.grad[1]})`;
+    el.textContent = t.name;
+    el.onclick = ()=>{ selected = t.id; renderTemplates(); render(); };
+    wrap.appendChild(el);
+  });
+}
+function render(){
+  const t = templates.find(x=>x.id===selected) || templates[0];
+  const shop = document.getElementById('pShop').value || 'आपकी दुकान';
+  const product = document.getElementById('pProduct').value || 'प्रोडक्ट का नाम';
+  const np = document.getElementById('pNew').value;
+  const op = document.getElementById('pOld').value;
+  const offer = document.getElementById('pOffer').value || t.name + ' ऑफर!';
+  const phone = document.getElementById('pPhone').value;
+  const address = document.getElementById('pAddress').value;
+  document.getElementById('previewWrap').innerHTML = `
+    <div class="preview" style="background:linear-gradient(150deg, ${t.grad[0]}, ${t.grad[1]});">
+      <div class="ptag">${esc(t.name)}</div>
+      <div class="pshop">${esc(shop)}</div>
+      <div class="pproduct">${esc(product)}</div>
+      ${np ? `<div class="pprice">₹${esc(np)}</div>` : ''}
+      ${op ? `<div class="pold">₹${esc(op)}</div>` : ''}
+      <div class="pfooter">${esc(offer)}${phone ? ' · 📞 '+esc(phone) : ''}${address ? ' · '+esc(address) : ''}</div>
+    </div>`;
+}
+function savePoster(){
+  try{
+    const list = JSON.parse(localStorage.getItem('cb_posters')||'[]');
+    list.unshift({tpl:selected, shop:document.getElementById('pShop').value, product:document.getElementById('pProduct').value, date:new Date().toISOString().slice(0,10)});
+    localStorage.setItem('cb_posters', JSON.stringify(list));
+    toast('पोस्टर सेव हो गया ✓');
+  }catch(e){ toast('सेव नहीं हो पाया'); }
+}
+function shareWhatsapp(){
+  const shop = document.getElementById('pShop').value || 'हमारी दुकान';
+  const product = document.getElementById('pProduct').value || '';
+  const np = document.getElementById('pNew').value;
+  const op = document.getElementById('pOld').value;
+  const offer = document.getElementById('pOffer').value;
+  const phone = document.getElementById('pPhone').value;
+  let msg = `🛍️ *${shop}*\n`;
+  if(product) msg += `${product}\n`;
+  if(np) msg += `विशेष मूल्य: ₹${np}${op ? ` (पहले ₹${op})` : ''}\n`;
+  if(offer) msg += `${offer}\n`;
+  if(phone) msg += `📞 ${phone}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+/* PHOTO POSTER (upload + filters + AI bg remove + eraser) */
+let origImage = null;
+let workCanvas = document.createElement('canvas');
+let workCtx = workCanvas.getContext('2d');
+let bgMode = 'solid';
+let bodyPixNet = null;
+let bgRemoved = false;
+let eraserOn = false;
+let history = [];
+const MAX_DIM = 900;
+
+function onPhotoSelected(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      origImage = img;
+      let w = img.width, h = img.height;
+      if(w > MAX_DIM){ h = h * (MAX_DIM/w); w = MAX_DIM; }
+      workCanvas.width = w; workCanvas.height = h;
+      workCtx.filter = 'none';
+      workCtx.clearRect(0,0,w,h);
+      workCtx.drawImage(img,0,0,w,h);
+      bgRemoved = false;
+      document.getElementById('uploadBox').style.display='none';
+      document.getElementById('photoEditorWrap').style.display='block';
+      document.getElementById('brSlider').value=0; document.getElementById('ctSlider').value=0; document.getElementById('saSlider').value=0;
+      document.getElementById('brVal').textContent=0; document.getElementById('ctVal').textContent=0; document.getElementById('saVal').textContent=0;
+      applyFilters();
+      setupCanvasTouch();
+      toast('फोटो लोड हो गई ✓');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function applyFilters(){
+  const br = Number(document.getElementById('brSlider').value);
+  const ct = Number(document.getElementById('ctSlider').value);
+  const sa = Number(document.getElementById('saSlider').value);
+  document.getElementById('brVal').textContent = br;
+  document.getElementById('ctVal').textContent = ct;
+  document.getElementById('saVal').textContent = sa;
+  const w = workCanvas.width, h = workCanvas.height;
+  const brightness = 100 + br, contrast = 100 + ct, saturate = 100 + sa;
+  workCtx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%)`;
+  workCtx.clearRect(0,0,w,h);
+  workCtx.drawImage(origImage,0,0,w,h);
+  workCtx.filter = 'none';
+  renderFinal();
+}
+function bakeFilters(){
+  toast('एडिट फाइनल हो गया ✓ अब बैकग्राउंड सेक्शन पर जाएं');
+}
+
+async function removeBackground(){
+  const btn = document.getElementById('removeBgBtn');
+  const statusWrap = document.getElementById('bgStatusWrap');
+  btn.disabled = true;
+  statusWrap.innerHTML = `<div class="status-pill"><div class="spinner"></div> AI मॉडल लोड हो रहा है, थोड़ा समय लगेगा...</div>`;
+  try{
+    if(!bodyPixNet){ bodyPixNet = await bodyPix.load(); }
+    statusWrap.innerHTML = `<div class="status-pill"><div class="spinner"></div> बैकग्राउंड हटाया जा रहा है...</div>`;
+    const segmentation = await bodyPixNet.segmentPerson(workCanvas, {internalResolution:'medium', segmentationThreshold:0.6});
+    const imgData = workCtx.getImageData(0,0,workCanvas.width, workCanvas.height);
+    const data = imgData.data;
+    const mask = segmentation.data;
+    for(let i=0;i<mask.length;i++){ if(mask[i]===0){ data[i*4+3] = 0; } }
+    workCtx.putImageData(imgData,0,0);
+    bgRemoved = true;
+    statusWrap.innerHTML = `<div class="status-pill">✅ बैकग्राउंड हट गया — अब नीचे रंग/ग्रेडिएंट चुनें</div>`;
+    renderFinal();
+  }catch(err){
+    statusWrap.innerHTML = `<div class="status-pill" style="background:#FBE3E0;color:#C0392B;">⚠️ बैकग्राउंड हटाने में दिक्कत आई, दोबारा कोशिश करें</div>`;
+  }
+  btn.disabled = false;
+}
+
+function setBgMode(mode){
+  bgMode = mode;
+  document.getElementById('bgSolidBtn').classList.toggle('sel', mode==='solid');
+  document.getElementById('bgGradBtn').classList.toggle('sel', mode==='gradient');
+  document.getElementById('bgTransBtn').classList.toggle('sel', mode==='transparent');
+  document.getElementById('colorRow1').style.display = mode==='transparent' ? 'none' : 'flex';
+  document.getElementById('colorRow2').style.display = mode==='gradient' ? 'flex' : 'none';
+  renderFinal();
+}
+
+function renderFinal(){
+  const canvas = document.getElementById('finalCanvas');
+  const w = workCanvas.width || 500, h = workCanvas.height || 600;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,w,h);
+  if(bgRemoved){
+    if(bgMode==='solid'){
+      ctx.fillStyle = document.getElementById('bgColor1').value;
+      ctx.fillRect(0,0,w,h);
+    } else if(bgMode==='gradient'){
+      const g = ctx.createLinearGradient(0,0,w,h);
+      g.addColorStop(0, document.getElementById('bgColor1').value);
+      g.addColorStop(1, document.getElementById('bgColor2').value);
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,w,h);
+    }
+  }
+  if(workCanvas.width){
+    const scale = photoScale/100;
+    const dw = w*scale, dh = h*scale;
+    const dx = (w-dw)/2, dy = (h-dh)/2;
+    ctx.drawImage(workCanvas, dx, dy, dw, dh);
+  }
+
+  const shop = document.getElementById('phShop')?.value || '';
+  const product = document.getElementById('phProduct')?.value || '';
+  const np = document.getElementById('phNew')?.value || '';
+  const op = document.getElementById('phOld')?.value || '';
+  if(shop || product || np){
+    const bannerH = Math.round(h*0.22);
+    const grad = ctx.createLinearGradient(0,h-bannerH,0,h);
+    grad.addColorStop(0,'rgba(0,0,0,0)');
+    grad.addColorStop(1,'rgba(0,0,0,0.72)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,h-bannerH,w,bannerH);
+    ctx.textAlign='center';
+    ctx.fillStyle='#fff';
+    const ts = textScale/100;
+    let y = h - bannerH*0.55;
+    if(shop){ ctx.font = `700 ${Math.round(w*0.05*ts)}px system-ui,sans-serif`; ctx.fillText(shop, w/2, y); y += w*0.07*ts; }
+    if(product){ ctx.font = `800 ${Math.round(w*0.065*ts)}px system-ui,sans-serif`; ctx.fillText(product, w/2, y); y += w*0.075*ts; }
+    if(np){ ctx.font = `800 ${Math.round(w*0.08*ts)}px system-ui,sans-serif`; ctx.fillText('₹'+np, w/2, y); }
+  }
+
+  if(currentEmoji){
+    const size = 24 + (emojiSize/100)*(w*0.28 - 24);
+    ctx.font = `${Math.round(size)}px system-ui,sans-serif`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(currentEmoji, w*0.84, h*0.14);
+  }
+}
+
+/* Photo size */
+let photoScale = 100;
+function onPhotoSizeChange(){
+  photoScale = Number(document.getElementById('photoSizeSlider').value);
+  document.getElementById('photoSizeVal').textContent = photoScale+'%';
+  renderFinal();
+}
+
+/* Text size */
+let textScale = 100;
+function onTextSizeChange(){
+  textScale = Number(document.getElementById('textSizeSlider').value);
+  document.getElementById('textSizeVal').textContent = textScale+'%';
+  renderFinal();
+}
+
+/* Emoji */
+let currentEmoji = null;
+let emojiSize = 50;
+function setEmoji(e){
+  currentEmoji = e;
+  renderFinal();
+  toast('इमोजी लग गया ✓ — साइज़ स्लाइडर से छोटा-बड़ा करें');
+}
+function onEmojiSizeChange(){
+  emojiSize = Number(document.getElementById('emojiSizeSlider').value);
+  document.getElementById('emojiSizeVal').textContent = emojiSize+'%';
+  renderFinal();
+}
+function removeEmoji(){
+  currentEmoji = null;
+  renderFinal();
+}
+
+function toggleEraser(){
+  eraserOn = !eraserOn;
+  document.getElementById('eraserBtn').classList.toggle('sel', eraserOn);
+  document.getElementById('eraserBtn').textContent = eraserOn ? '🧽 इरेज़र चालू है (टैप कर बंद करें)' : '🧽 इरेज़र चालू करें';
+}
+function pushHistory(){
+  try{ history.push(workCtx.getImageData(0,0,workCanvas.width,workCanvas.height)); if(history.length>8) history.shift(); }catch(e){}
+}
+function undoErase(){
+  if(history.length===0){ toast('कुछ वापस लेने को नहीं है'); return; }
+  const last = history.pop();
+  workCtx.putImageData(last,0,0);
+  renderFinal();
+}
+function setupCanvasTouch(){
+  const canvas = document.getElementById('finalCanvas');
+  let drawing = false;
+  function getPos(e){
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    return {x: cx*scaleX, y: cy*scaleY};
+  }
+  function erase(x,y){
+    const size = Number(document.getElementById('brushSize').value);
+    workCtx.save();
+    workCtx.globalCompositeOperation = 'destination-out';
+    workCtx.beginPath();
+    workCtx.arc(x,y,size/2,0,Math.PI*2);
+    workCtx.fill();
+    workCtx.restore();
+    renderFinal();
+  }
+  function start(e){ if(!eraserOn) return; e.preventDefault(); pushHistory(); drawing = true; const p = getPos(e); erase(p.x,p.y); }
+  function move(e){ if(!eraserOn || !drawing) return; e.preventDefault(); const p = getPos(e); erase(p.x,p.y); }
+  function end(){ drawing = false; }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, {passive:false});
+  canvas.addEventListener('touchmove', move, {passive:false});
+  canvas.addEventListener('touchend', end);
+}
+
+function downloadPhotoPoster(){
+  const canvas = document.getElementById('finalCanvas');
+  const link = document.createElement('a');
+  link.download = 'poster-'+Date.now()+'.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  toast('फोटो डाउनलोड हो गई ✓');
+}
+async function sharePhotoPoster(){
+  const canvas = document.getElementById('finalCanvas');
+  canvas.toBlob(async (blob)=>{
+    const file = new File([blob], 'poster.png', {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:'पोस्टर', text: document.getElementById('phShop').value||''}); }catch(e){}
+    } else {
+      downloadPhotoPoster();
+      toast('फोटो डाउनलोड हो गई — अब WhatsApp खोलकर मैन्युअल शेयर करें');
+    }
+  }, 'image/png');
+}
+function resetPhotoEditor(){
+  document.getElementById('uploadBox').style.display='block';
+  document.getElementById('photoEditorWrap').style.display='none';
+  document.getElementById('photoInput').value='';
+  origImage = null; bgRemoved = false; history = [];
+  document.getElementById('bgStatusWrap').innerHTML='';
+}
+
+renderTemplates();
+render();
+renderFestivalBanner();
+</script>
+</body>
+</html>

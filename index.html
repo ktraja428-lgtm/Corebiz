@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
@@ -17,65 +17,12 @@ body{background:#0F172A;color:#fff;font-family:system-ui,sans-serif;min-height:1
 </style>
 </head>
 <body>
-<div id="authGate" style="position:fixed;inset:0;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:system-ui,sans-serif;font-size:14px;">Checking login...</div>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-  const firebaseConfig = {
-    apiKey: "AIzaSyDJRsJMU-jfy2iQoZsCVZGmyMT-l9mEMf8",
-    authDomain: "corebiz-f7762.firebaseapp.com",
-    projectId: "corebiz-f7762",
-    storageBucket: "corebiz-f7762.firebasestorage.app",
-    messagingSenderId: "928975624139",
-    appId: "1:928975624139:web:c24e248984883a3a3O484e",
-    measurementId: "G-33FSED87HM"
-  };
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  window.firebaseSignOut = () => { signOut(auth).then(() => { window.location.href = "login.html"; }); };
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) { window.location.href = "login.html"; return; }
-    window.CB_UID = user.uid;
-    try {
-      const snap = await getDoc(doc(db, 'users', user.uid, 'profile', 'info'));
-      window.CB_BUSINESS_TYPE = (snap.exists() && snap.data().businessType) ? snap.data().businessType : 'chhota';
-    } catch (e) {
-      window.CB_BUSINESS_TYPE = 'chhota';
-    }
-    try {
-      const todayStr = new Date().toISOString().slice(0,10);
-      const tsnap = await getDocs(collection(db, 'users', user.uid, 'transactions'));
-      let inc=0, exp=0, has=false;
-      tsnap.forEach(d=>{
-        const t=d.data();
-        if(t.date===todayStr){ has=true; if(t.type==='income') inc+=Number(t.amount)||0; else exp+=Number(t.amount)||0; }
-      });
-      window.CB_TODAY_HAS_ENTRY = has;
-      window.CB_TODAY_INCOME = inc;
-      window.CB_TODAY_EXPENSE = exp;
-    } catch (e) {
-      window.CB_TODAY_HAS_ENTRY = true;
-      window.CB_TODAY_INCOME = 0;
-      window.CB_TODAY_EXPENSE = 0;
-    }
-    const gate = document.getElementById('authGate'); if (gate) gate.style.display = 'none';
-  });
-</script>
- <div id="root"></div>
+<div id="root"></div>
  <div id="cbMenuBtn" onclick="document.getElementById('cbMenu').style.display=document.getElementById('cbMenu').style.display==='block'?'none':'block'" style="position:fixed;top:14px;right:14px;background:#1E293B;border:1px solid #334155;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;z-index:9999;color:#fff">☰</div>
 <div id="cbMenu" style="display:none;position:fixed;top:64px;right:14px;background:#1E293B;border:1px solid #334155;border-radius:12px;padding:8px;z-index:9999;min-width:170px;box-shadow:0 8px 24px rgba(0,0,0,0.5)">
 <a href="customers.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">👥 Customers</a>
  <a href="pricing.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">💰 Pricing</a>
-  <a href="invoice.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">🧾 Invoice Banao</a>
-  <a href="settings.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">⚙️ Settings</a>
-<a href="reports.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">📊 Reports</a>
-<a href="stock.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">📦 Stock</a>
-<a href="expense.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">💰 Hisaab</a>
-<a href="calculator.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">🧮 Calculator</a>
-  <a href="orders.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">🛒 Orders</a>
-</div>
+<a href="reports.html" style="display:block;padding:12px 14px;color:#fff;text-decoration:none;font-size:14px;border-radius:8px;font-weight:600">📊 Reports</a></div>
 <script type="text/babel">
 const ROLES=[{key:"CEO",label:"CEO",icon:"👑",color:"#F59E0B"},{key:"SALES",label:"Sales",icon:"💼",color:"#3B82F6"},{key:"MARKETING",label:"Marketing",icon:"📣",color:"#8B5CF6"},{key:"HR",label:"HR",icon:"👥",color:"#10B981"},{key:"FINANCE",label:"Finance",icon:"💰",color:"#F97316"},{key:"OPERATIONS",label:"Operations",icon:"⚙️",color:"#EC4899"}];
 const DATA={CEO:{stats:[{l:"Kamai",v:"₹12,40,000",up:true},{l:"Munafa",v:"₹3,20,000",up:true},{l:"Team",v:"47 log",up:true},{l:"Kharcha",v:"₹9,20,000",up:false}],tasks:["Q2 report check karo","Naye product approve karo","Meeting ki taiyari karo","Contract sign karo"]},SALES:{stats:[{l:"Aaj ke Orders",v:"34",up:true},{l:"Is Mahine",v:"₹4,80,000",up:true},{l:"Pending Deal",v:"12",up:false},{l:"Conversion",v:"68%",up:true}],tasks:["5 leads ko call karo","CRM update karo","Ramesh ka quotation bhejo","Weekly report banao"]},MARKETING:{stats:[{l:"IG Reach",v:"18,400",up:true},{l:"Campaigns",v:"3 chal rahi",up:true},{l:"Naye Leads",v:"210",up:true},{l:"Ad Kharcha",v:"₹12,000",up:false}],tasks:["3 reels post karo","Festival banner banao","WhatsApp broadcast bhejo","Campaign report dekho"]},HR:{stats:[{l:"Total Staff",v:"47",up:true},{l:"Chutti Pe",v:"4 log",up:false},{l:"Khaali Post",v:"6",up:false},{l:"Upasthiti",v:"91%",up:true}],tasks:["Marketing interview lo","June ki salary do","Handbook update karo","2 logon ko join karwao"]},FINANCE:{stats:[{l:"Cash Balance",v:"₹8,60,000",up:true},{l:"Milna Baki",v:"₹2,10,000",up:false},{l:"Dena Baki",v:"₹75,000",up:false},{l:"GST Status",v:"Sahi Hai ✓",up:true}],tasks:["Bank statement milao","Vendor ko paisa do","GST file karo","CEO ke liye P&L banao"]},OPERATIONS:{stats:[{l:"Stock",v:"1,240 kg",up:false},{l:"Dispatch Baki",v:"18",up:false},{l:"Aaj Pahuncha",v:"22",up:true},{l:"Wapas Aaya",v:"2",up:true}],tasks:["Ginger-garlic reorder karo","50 orders pack karo","Amla quality check karo","Inventory update karo"]}};
@@ -123,11 +70,7 @@ function Login({onLogin}){
 }
 
 function App(){
-  const[loggedIn,setLoggedIn]=React.useState(true);
-  const[bizType]=React.useState(window.CB_BUSINESS_TYPE||'chhota');
-  const[hasEntry]=React.useState(window.CB_TODAY_HAS_ENTRY!==false);
-  const[todayIncome]=React.useState(window.CB_TODAY_INCOME||0);
-  const[todayExpense]=React.useState(window.CB_TODAY_EXPENSE||0);
+  const[loggedIn,setLoggedIn]=React.useState(localStorage.getItem('cbLoggedIn')==='1');
   const[role,setRole]=React.useState("CEO");
   const[targetOn,setTargetOn]=React.useState(false);
   const[tasks,setTasks]=React.useState(Object.fromEntries(ROLES.map(r=>[r.key,DATA[r.key].tasks.map((t,i)=>({text:t,done:false,id:i}))])));
@@ -140,14 +83,9 @@ function App(){
   const myTasks=tasks[role];
   const done=myTasks.filter(t=>t.done).length;
   const target=TARGETS[role];
-  const visibleStats=data.stats.filter(s=>bizType!=='chhota'||s.l!=="Team");
 
   const toggle=id=>setTasks(p=>({...p,[role]:p[role].map(t=>t.id===id?{...t,done:!t.done}:t)}));
   const add=()=>{if(!newTask.trim())return;setTasks(p=>({...p,[role]:[...p[role],{text:newTask,done:false,id:Date.now()}]}));setNewTask("");};
-  const sendWhatsappReport=()=>{
-    const msg=`📊 Aaj Ka Report\n\nKamai: ₹${todayIncome}\nKharcha: ₹${todayExpense}\nBacha: ₹${todayIncome-todayExpense}`;
-    window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-  };
 
   return(
     <div style={{minHeight:"100vh",background:"#0F172A",color:"#fff",fontFamily:"system-ui,sans-serif"}}>
@@ -160,22 +98,11 @@ function App(){
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:10,color:"#475569"}}>{today()}</span>
-          <button onClick={()=>{if(window.firebaseSignOut)window.firebaseSignOut();}} style={{background:"#0F172A",border:"1px solid #334155",borderRadius:7,padding:"4px 10px",color:"#64748B",fontSize:10,cursor:"pointer"}}>🔒 Logout</button>
+          <button onClick={()=>setLoggedIn(false)} style={{background:"#0F172A",border:"1px solid #334155",borderRadius:7,padding:"4px 10px",color:"#64748B",fontSize:10,cursor:"pointer"}}>🔒 Logout</button>
         </div>
       </div>
 
-      {!hasEntry && (
-        <div style={{background:"#78350F",borderBottom:"1px solid #F59E0B",padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontSize:12,color:"#FDE68A"}}>⚠️ Aaj ka hisaab abhi likha nahi</span>
-          <a href="expense.html" style={{fontSize:12,color:"#F59E0B",fontWeight:800,textDecoration:"none"}}>Likho →</a>
-        </div>
-      )}
-      <div style={{padding:"10px 14px"}}>
-        <button onClick={sendWhatsappReport} style={{width:"100%",background:"#10B981",border:"none",borderRadius:9,padding:11,color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer"}}>💬 Aaj Ka Report WhatsApp Pe Bhejo</button>
-      </div>
-
-      {/* Role Tabs — sirf Badi Company ke liye */}
-      {bizType!=='chhota'&&(
+      {/* Role Tabs */}
       <div style={{background:"#1E293B",borderBottom:"1px solid #334155",padding:"8px 10px",display:"flex",gap:6,overflowX:"auto"}}>
         {ROLES.map(r=>(
           <button key={r.key} onClick={()=>setRole(r.key)} style={S.btn(r.color,role===r.key)}>
@@ -184,7 +111,6 @@ function App(){
           </button>
         ))}
       </div>
-      )}
 
       <div style={{padding:14,maxWidth:500,margin:"0 auto"}}>
 
@@ -192,14 +118,14 @@ function App(){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
           <div style={{width:42,height:42,borderRadius:11,background:R.color+"22",border:`2px solid ${R.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{R.icon}</div>
           <div>
-            <div style={{fontSize:16,fontWeight:800}}>{bizType==='chhota'?"Mera Business":R.label+" Dashboard"}</div>
+            <div style={{fontSize:16,fontWeight:800}}>{R.label} Dashboard</div>
             <div style={{fontSize:10,color:"#64748B"}}>Aaj ka hisaab · {today()}</div>
           </div>
         </div>
 
         {/* Stats */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-          {visibleStats.map((s,i)=>(
+          {data.stats.map((s,i)=>(
             <div key={i} style={S.card}>
               <div style={{fontSize:10,color:"#64748B",marginBottom:4}}>{s.l}</div>
               <div style={{fontSize:19,fontWeight:800}}>{s.v}</div>
@@ -208,8 +134,8 @@ function App(){
           ))}
         </div>
 
-        {/* CEO Target Panel — sirf Badi Company ke liye */}
-        {role==="CEO"&&bizType!=='chhota'&&(
+        {/* CEO Target Panel */}
+        {role==="CEO"&&(
           <div style={{...S.card,marginBottom:14}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
               <div>
